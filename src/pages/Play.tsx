@@ -53,8 +53,9 @@ export default function Play() {
         : 'You are an AI mentor helping the user explore creative and professional tools. Be practical and encouraging.'
       const answer = await askGemini(msg, context)
       addPlayMessage({ id: (Date.now() + 1).toString(), role: 'assistant', content: answer, timestamp: new Date() })
-    } catch {
-      addPlayMessage({ id: (Date.now() + 1).toString(), role: 'assistant', content: 'Unable to reach the AI mentor.', timestamp: new Date() })
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : String(err)
+      addPlayMessage({ id: (Date.now() + 1).toString(), role: 'assistant', content: `Error: ${msg}`, timestamp: new Date() })
     } finally {
       setLoading(false)
     }

@@ -43,8 +43,9 @@ export default function Learn() {
       const context = activeTopic ? `The user is learning about: ${topics.find((t) => t.id === activeTopic)?.label}` : undefined
       const answer = await askGemini(msg, context)
       addLearnMessage({ id: (Date.now() + 1).toString(), role: 'assistant', content: answer, timestamp: new Date() })
-    } catch {
-      addLearnMessage({ id: (Date.now() + 1).toString(), role: 'assistant', content: 'Unable to reach the AI. Check your API key.', timestamp: new Date() })
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : String(err)
+      addLearnMessage({ id: (Date.now() + 1).toString(), role: 'assistant', content: `Error: ${msg}`, timestamp: new Date() })
     } finally {
       setLoading(false)
     }

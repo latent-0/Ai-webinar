@@ -12,36 +12,46 @@ function getClient() {
 
 export async function askGemini(prompt: string, context?: string): Promise<string> {
   const client = getClient()
-  if (!client) {
-    return 'Please add your VITE_GEMINI_API_KEY to enable AI features.'
-  }
-
+  if (!client) return 'No API key set. Add VITE_GEMINI_API_KEY to your .env.local file.'
   const model = client.getGenerativeModel({ model: 'gemini-1.5-flash' })
 
   const fullPrompt = context
     ? `You are an AI assistant for the Sandbox platform. Context: ${context}\n\nUser question: ${prompt}\n\nProvide a concise, helpful response.`
     : `You are an AI assistant for the Sandbox learning platform. Answer this question concisely and helpfully: ${prompt}`
 
-  const result = await model.generateContent(fullPrompt)
-  return result.response.text()
+  try {
+    const result = await model.generateContent(fullPrompt)
+    return result.response.text()
+  } catch (err: unknown) {
+    const msg = err instanceof Error ? err.message : String(err)
+    return `API error: ${msg}`
+  }
 }
 
 export async function generateWebinarSummary(questions: string[]): Promise<string> {
   const client = getClient()
-  if (!client) return 'AI features require a Gemini API key.'
-
+  if (!client) return 'No API key set.'
   const model = client.getGenerativeModel({ model: 'gemini-1.5-flash' })
   const prompt = `Summarize these webinar questions into key themes and insights:\n${questions.join('\n')}`
-  const result = await model.generateContent(prompt)
-  return result.response.text()
+  try {
+    const result = await model.generateContent(prompt)
+    return result.response.text()
+  } catch (err: unknown) {
+    const msg = err instanceof Error ? err.message : String(err)
+    return `API error: ${msg}`
+  }
 }
 
 export async function generateLearningPath(topic: string): Promise<string> {
   const client = getClient()
-  if (!client) return 'AI features require a Gemini API key.'
-
+  if (!client) return 'No API key set.'
   const model = client.getGenerativeModel({ model: 'gemini-1.5-flash' })
   const prompt = `Create a concise 5-step learning path for: "${topic}". Format as numbered steps with brief descriptions. Be practical and actionable.`
-  const result = await model.generateContent(prompt)
-  return result.response.text()
+  try {
+    const result = await model.generateContent(prompt)
+    return result.response.text()
+  } catch (err: unknown) {
+    const msg = err instanceof Error ? err.message : String(err)
+    return `API error: ${msg}`
+  }
 }

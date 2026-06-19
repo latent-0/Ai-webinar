@@ -1,143 +1,215 @@
 import { Link } from '@tanstack/react-router'
-import { Radio, BookOpen, Gamepad2, ArrowRight, Zap, Brain, Database, Wrench } from 'lucide-react'
+import { Radio, BookOpen, Gamepad2, ArrowRight, Zap, Brain, Database, Wrench, ChevronRight, Sparkles } from 'lucide-react'
 
 const modes = [
   {
     id: 'live',
+    tag: '01',
     title: 'Live',
-    subtitle: 'Engage',
+    subtitle: 'Engage in real time',
     icon: Radio,
-    gradient: 'from-blue-500/20 to-blue-600/5',
-    border: 'border-blue-500/30',
-    iconBg: 'bg-blue-500/20',
-    iconColor: 'text-blue-400',
-    dot: 'bg-blue-400',
+    color: 'text-blue-400',
+    cardBorder: 'border-blue-500/20 hover:border-blue-500/40',
+    iconBg: 'bg-blue-500/10',
+    dotColor: 'bg-blue-400',
+    topLine: 'from-transparent via-blue-500/50 to-transparent',
     href: '/live',
-    description: 'Interactive webinar experience with AI-powered Q&A, real-time reactions, and intelligent audience engagement.',
-    features: ['Built-in AI reasoning model', 'Real-time question capture', 'Participant tracking', 'Live reactions & polls'],
+    description: 'Host webinars with AI-powered Q&A, live reactions, and intelligent audience engagement that adapts to your room in real time.',
+    features: ['AI synthesises audience questions', 'Real-time participant tracking', 'Live polls & reactions', 'In-session knowledge capture'],
   },
   {
     id: 'learn',
+    tag: '02',
     title: 'Learn',
-    subtitle: 'Understand',
+    subtitle: 'Build deep knowledge',
     icon: BookOpen,
-    gradient: 'from-emerald-500/20 to-emerald-600/5',
-    border: 'border-emerald-500/30',
-    iconBg: 'bg-emerald-500/20',
-    iconColor: 'text-emerald-400',
-    dot: 'bg-emerald-400',
+    color: 'text-emerald-400',
+    cardBorder: 'border-emerald-500/20 hover:border-emerald-500/40',
+    iconBg: 'bg-emerald-500/10',
+    dotColor: 'bg-emerald-400',
+    topLine: 'from-transparent via-emerald-500/50 to-transparent',
     href: '/learn',
-    description: 'Deep knowledge hub powered by RAG. Access domain-specific learning for auditing, science, dentistry, and more.',
-    features: ['RAG-powered knowledge base', 'Domain-specific AI', 'Structured learning paths', 'Guided Q&A'],
+    description: 'RAG-powered knowledge hub with domain-specific AI. From dentistry to digital marketing — expert-level depth on demand.',
+    features: ['6 curated domain knowledge bases', 'AI-generated learning paths', 'Structured Q&A with memory', 'Contextual follow-up questions'],
   },
   {
     id: 'play',
+    tag: '03',
     title: 'Play',
-    subtitle: 'Explore',
+    subtitle: 'Experiment & discover',
     icon: Gamepad2,
-    gradient: 'from-violet-500/20 to-violet-600/5',
-    border: 'border-violet-500/30',
-    iconBg: 'bg-violet-500/20',
-    iconColor: 'text-violet-400',
-    dot: 'bg-violet-400',
+    color: 'text-violet-400',
+    cardBorder: 'border-violet-500/20 hover:border-violet-500/40',
+    iconBg: 'bg-violet-500/10',
+    dotColor: 'bg-violet-400',
+    topLine: 'from-transparent via-violet-500/50 to-transparent',
     href: '/play',
-    description: 'Experimental sandbox with third-party tool integrations. Learn by doing with AI as your always-on mentor.',
-    features: ['Plug-in API tools', 'AI-generated workflows', 'Real-world scenarios', 'Creative tool integrations'],
+    description: 'A sandbox for hands-on tool exploration with an always-on AI mentor. Learn by doing — not watching slide decks.',
+    features: ['6 integrated professional tools', 'Step-by-step AI guidance', 'Pre-built real-world scenarios', 'Creative workflow generation'],
   },
 ]
 
-const platformPillars = [
-  { icon: Brain, label: 'Reasoning', desc: 'Agentic AI that thinks' },
-  { icon: Database, label: 'Knowledge', desc: 'RAG-powered memory' },
-  { icon: Wrench, label: 'Tools', desc: 'Pluggable integrations' },
+const pillars = [
+  { icon: Brain, label: 'Reasoning', desc: 'Thinks before answering' },
+  { icon: Database, label: 'Knowledge', desc: 'RAG across all domains' },
+  { icon: Wrench, label: 'Tools', desc: 'Real software, real tasks' },
+]
+
+const stats = [
+  { value: '3', label: 'Core modes' },
+  { value: '6', label: 'Knowledge domains' },
+  { value: '6', label: 'Integrated tools' },
 ]
 
 export default function Landing() {
   return (
-    <div className="min-h-screen">
+    <div className="min-h-screen relative">
+      {/* Ambient background glow */}
+      <div className="fixed inset-0 -z-10 overflow-hidden pointer-events-none">
+        <div className="absolute -top-32 left-[10%] w-[600px] h-[600px] bg-blue-600/[0.055] rounded-full blur-[120px]" />
+        <div className="absolute top-[40%] right-[5%] w-[450px] h-[450px] bg-violet-600/[0.045] rounded-full blur-[100px]" />
+        <div className="absolute bottom-[15%] left-[35%] w-[400px] h-[400px] bg-emerald-600/[0.035] rounded-full blur-[100px]" />
+      </div>
+
       {/* Hero */}
-      <section className="px-8 pt-16 pb-12 max-w-5xl mx-auto">
-        <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-[#1E1E2E] border border-[#2A2A3A] text-xs text-[#888899] mb-8">
-          <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
-          One ecosystem. Three powerful modes. Infinite possibilities.
+      <section className="px-6 lg:px-10 pt-16 pb-12 max-w-[1100px] mx-auto">
+        {/* Status pill */}
+        <div className="flex items-center gap-3 mb-10">
+          <div className="inline-flex items-center gap-2.5 px-3.5 py-1.5 rounded-full border border-white/[0.08] bg-white/[0.03] backdrop-blur-sm">
+            <span className="relative flex h-1.5 w-1.5">
+              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-60" />
+              <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-emerald-400" />
+            </span>
+            <span className="text-xs text-[#9999AA] font-medium">Platform live</span>
+          </div>
+          <span className="hidden lg:flex items-center gap-1.5 text-xs text-[#4A4A5A]">
+            <Sparkles size={10} />
+            AI-powered webinars · learning · tool sandbox
+          </span>
         </div>
 
-        <h1 className="text-5xl lg:text-7xl font-bold tracking-tight mb-6 leading-none">
-          <span className="text-white">Live</span>
-          <span className="text-[#2A2A3A] mx-4">·</span>
-          <span className="gradient-text">Learn</span>
-          <span className="text-[#2A2A3A] mx-4">·</span>
-          <span className="text-white">Play</span>
+        {/* Headline */}
+        <h1 className="text-[clamp(2.6rem,6.5vw,5.2rem)] font-extrabold leading-[0.9] tracking-tight mb-7">
+          <span className="text-white block">Not another</span>
+          <span
+            className="block"
+            style={{
+              background: 'linear-gradient(135deg, #60A5FA 0%, #A78BFA 50%, #34D399 100%)',
+              WebkitBackgroundClip: 'text',
+              WebkitTextFillColor: 'transparent',
+              backgroundClip: 'text',
+            }}
+          >
+            webinar tool.
+          </span>
         </h1>
 
-        <p className="text-lg text-[#888899] max-w-2xl leading-relaxed mb-10">
-          The antidote to the antiquated webinar experience. Agentic AI that remembers, learns, and compounds knowledge — delivering a 1:1 experience to every participant in real time.
+        <p className="text-[1.05rem] text-[#6B6B85] max-w-[480px] leading-relaxed mb-10 font-light">
+          Agentic AI that listens, learns, and responds — delivering a personalised intelligence layer to every participant in the room.
         </p>
 
-        <div className="flex flex-wrap gap-3">
-          <Link to="/live" className="flex items-center gap-2 px-5 py-2.5 rounded-lg bg-blue-500 hover:bg-blue-400 text-white font-medium text-sm transition-colors">
-            Start a session <ArrowRight size={16} />
+        <div className="flex flex-wrap items-center gap-3">
+          <Link
+            to="/live"
+            className="group flex items-center gap-2 px-5 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-semibold text-sm transition-all hover:shadow-xl hover:shadow-blue-500/25 hover:-translate-y-px"
+          >
+            Start a session
+            <ArrowRight size={15} className="group-hover:translate-x-0.5 transition-transform" />
           </Link>
-          <Link to="/learn" className="flex items-center gap-2 px-5 py-2.5 rounded-lg bg-[#1E1E2E] hover:bg-[#2A2A3A] text-white font-medium text-sm transition-colors border border-[#2A2A3A]">
-            Explore knowledge
+          <Link
+            to="/learn"
+            className="flex items-center gap-1 px-5 py-2.5 rounded-xl text-[#8888AA] hover:text-white font-medium text-sm transition-colors"
+          >
+            Explore knowledge hub <ChevronRight size={14} />
           </Link>
         </div>
       </section>
 
-      {/* Mode Cards */}
-      <section className="px-8 pb-12 max-w-5xl mx-auto">
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+      {/* Mode cards */}
+      <section className="px-6 lg:px-10 pb-12 max-w-[1100px] mx-auto">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-3">
           {modes.map((mode) => {
             const Icon = mode.icon
             return (
               <Link
                 key={mode.id}
                 to={mode.href}
-                className={`group p-6 rounded-xl bg-gradient-to-b ${mode.gradient} border ${mode.border} hover:border-opacity-60 transition-all`}
+                className={`group relative flex flex-col p-6 rounded-2xl border bg-white/[0.02] hover:bg-white/[0.035] transition-all duration-300 cursor-pointer ${mode.cardBorder}`}
               >
-                <div className="flex items-center justify-between mb-4">
-                  <div className={`w-10 h-10 rounded-lg ${mode.iconBg} flex items-center justify-center`}>
-                    <Icon size={20} className={mode.iconColor} />
+                {/* Top gradient line */}
+                <div className={`absolute top-0 inset-x-8 h-px bg-gradient-to-r ${mode.topLine}`} />
+
+                {/* Tag + icon row */}
+                <div className="flex items-start justify-between mb-5">
+                  <span className="text-[11px] font-mono text-[#3A3A50] tracking-wider">{mode.tag}</span>
+                  <div className={`p-2.5 rounded-xl ${mode.iconBg}`}>
+                    <Icon size={17} className={mode.color} />
                   </div>
-                  <ArrowRight size={16} className="text-[#444455] group-hover:text-white group-hover:translate-x-0.5 transition-all" />
                 </div>
 
-                <h3 className="text-xl font-bold text-white mb-1">{mode.title}</h3>
-                <p className={`text-xs font-medium ${mode.iconColor} mb-3`}>{mode.subtitle}</p>
-                <p className="text-sm text-[#888899] leading-relaxed mb-4">{mode.description}</p>
+                {/* Title */}
+                <div className="mb-4">
+                  <h3 className="text-2xl font-bold text-white tracking-tight mb-1">{mode.title}</h3>
+                  <p className={`text-xs font-medium ${mode.color} opacity-70`}>{mode.subtitle}</p>
+                </div>
 
-                <ul className="space-y-1.5">
+                {/* Description */}
+                <p className="text-sm text-[#6B6B85] leading-relaxed mb-5 flex-1">{mode.description}</p>
+
+                {/* Features */}
+                <ul className="space-y-1.5 mb-5">
                   {mode.features.map((f) => (
-                    <li key={f} className="flex items-center gap-2 text-xs text-[#666677]">
-                      <span className={`w-1 h-1 rounded-full ${mode.dot}`} />
+                    <li key={f} className="flex items-center gap-2 text-xs text-[#4A4A5A]">
+                      <span className={`w-1 h-1 rounded-full shrink-0 ${mode.dotColor}`} />
                       {f}
                     </li>
                   ))}
                 </ul>
+
+                {/* CTA */}
+                <div className={`flex items-center gap-1.5 text-xs ${mode.color} opacity-50 group-hover:opacity-100 transition-opacity font-medium`}>
+                  Open {mode.title}
+                  <ArrowRight size={11} className="group-hover:translate-x-0.5 transition-transform" />
+                </div>
               </Link>
             )
           })}
         </div>
       </section>
 
-      {/* Core Platform */}
-      <section className="px-8 pb-16 max-w-5xl mx-auto">
-        <div className="p-6 rounded-xl bg-[#111118] border border-[#1E1E2E]">
-          <div className="flex items-center gap-2 mb-4">
-            <Zap size={16} className="text-[#F59E0B]" />
-            <span className="text-sm font-semibold text-white">Core Platform</span>
-          </div>
-          <p className="text-sm text-[#888899] mb-5 max-w-lg">
-            All three modes run on a unified AI layer — reasoning, knowledge, and tools working together to deliver a compounding intelligence experience.
-          </p>
-          <div className="grid grid-cols-3 gap-3">
-            {platformPillars.map(({ icon: PIcon, label, desc }) => (
-              <div key={label} className="p-4 rounded-lg bg-[#16161F] border border-[#2A2A3A]">
-                <PIcon size={18} className="text-[#888899] mb-2" />
-                <p className="text-sm font-semibold text-white">{label}</p>
-                <p className="text-xs text-[#555566] mt-0.5">{desc}</p>
+      {/* Bottom strip: stats + AI layer */}
+      <section className="px-6 lg:px-10 pb-20 max-w-[1100px] mx-auto">
+        <div className="grid grid-cols-2 lg:grid-cols-[1fr_1fr_1fr_2.2fr] gap-3">
+          {stats.map(({ value, label }) => (
+            <div key={label} className="p-5 rounded-2xl border border-white/[0.06] bg-white/[0.02]">
+              <p className="text-3xl font-bold text-white mb-1 tracking-tight">{value}</p>
+              <p className="text-xs text-[#6B6B85]">{label}</p>
+            </div>
+          ))}
+
+          {/* Unified AI layer card */}
+          <div className="col-span-2 lg:col-span-1 p-5 rounded-2xl border border-white/[0.06] bg-white/[0.02]">
+            <div className="flex items-center gap-2 mb-3">
+              <div className="w-5 h-5 rounded-md bg-amber-500/15 flex items-center justify-center">
+                <Zap size={11} className="text-amber-400" />
               </div>
-            ))}
+              <span className="text-xs font-semibold text-white tracking-wide">Unified AI layer</span>
+            </div>
+            <p className="text-xs text-[#6B6B85] leading-relaxed mb-4">
+              Reasoning, knowledge, and tools — one intelligence core powering all three modes simultaneously.
+            </p>
+            <div className="flex flex-wrap gap-2">
+              {pillars.map(({ icon: PIcon, label, desc }) => (
+                <div
+                  key={label}
+                  title={desc}
+                  className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-white/[0.04] border border-white/[0.06] cursor-default"
+                >
+                  <PIcon size={11} className="text-[#8888AA]" />
+                  <span className="text-[11px] text-[#8888AA] font-medium">{label}</span>
+                </div>
+              ))}
+            </div>
           </div>
         </div>
       </section>

@@ -6,9 +6,17 @@
   box-sizing: border-box;
 }
 
+:root {
+  --bg: #07070F;
+  --surface: rgba(255, 255, 255, 0.025);
+  --border: rgba(255, 255, 255, 0.06);
+  --text: #F0F0FF;
+  --muted: #6B6B85;
+}
+
 body {
-  background-color: #0A0A0F;
-  color: #E4E4F0;
+  background-color: var(--bg);
+  color: var(--text);
   font-family: 'Inter', system-ui, sans-serif;
   margin: 0;
   padding: 0;
@@ -16,28 +24,36 @@ body {
 }
 
 ::-webkit-scrollbar {
-  width: 6px;
+  width: 5px;
+  height: 5px;
 }
 ::-webkit-scrollbar-track {
-  background: #111118;
+  background: transparent;
 }
 ::-webkit-scrollbar-thumb {
-  background: #2A2A3A;
-  border-radius: 3px;
+  background: rgba(255, 255, 255, 0.09);
+  border-radius: 999px;
 }
 ::-webkit-scrollbar-thumb:hover {
-  background: #3A3A4A;
-}
-
-.glass {
-  background: rgba(17, 17, 24, 0.8);
-  backdrop-filter: blur(12px);
-  border: 1px solid rgba(30, 30, 46, 0.8);
+  background: rgba(255, 255, 255, 0.16);
 }
 
 .gradient-text {
-  background: linear-gradient(135deg, #3B82F6, #8B5CF6);
+  background: linear-gradient(135deg, #60A5FA 0%, #A78BFA 55%, #34D399 100%);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
+}
+
+.dot-grid {
+  background-image: radial-gradient(circle, rgba(255, 255, 255, 0.035) 1px, transparent 1px);
+  background-size: 28px 28px;
+}
+
+.card-border {
+  border: 1px solid rgba(255, 255, 255, 0.07);
+}
+
+.surface {
+  background: rgba(255, 255, 255, 0.025);
 }
