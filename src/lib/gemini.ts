@@ -13,7 +13,7 @@ function getClient() {
 export async function askGemini(prompt: string, context?: string): Promise<string> {
   const client = getClient()
   if (!client) return 'No API key set. Add VITE_GEMINI_API_KEY to your .env.local file.'
-  const model = client.getGenerativeModel({ model: 'gemini-1.5-flash' })
+  const model = client.getGenerativeModel({ model: 'gemini-2.5-flash' })
 
   const fullPrompt = context
     ? `You are an AI assistant for the Sandbox platform. Context: ${context}\n\nUser question: ${prompt}\n\nProvide a concise, helpful response.`
@@ -31,7 +31,7 @@ export async function askGemini(prompt: string, context?: string): Promise<strin
 export async function generateWebinarSummary(questions: string[]): Promise<string> {
   const client = getClient()
   if (!client) return 'No API key set.'
-  const model = client.getGenerativeModel({ model: 'gemini-1.5-flash' })
+  const model = client.getGenerativeModel({ model: 'gemini-2.5-flash' })
   const prompt = `Summarize these webinar questions into key themes and insights:\n${questions.join('\n')}`
   try {
     const result = await model.generateContent(prompt)
@@ -45,7 +45,7 @@ export async function generateWebinarSummary(questions: string[]): Promise<strin
 export async function generateLearningPath(topic: string): Promise<string> {
   const client = getClient()
   if (!client) return 'No API key set.'
-  const model = client.getGenerativeModel({ model: 'gemini-1.5-flash' })
+  const model = client.getGenerativeModel({ model: 'gemini-2.5-flash' })
   const prompt = `Create a concise 5-step learning path for: "${topic}". Format as numbered steps with brief descriptions. Be practical and actionable.`
   try {
     const result = await model.generateContent(prompt)

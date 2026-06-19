@@ -1,5 +1,6 @@
 import { Link } from '@tanstack/react-router'
 import { Radio, BookOpen, Gamepad2, ArrowRight, Zap, Brain, Database, Wrench, ChevronRight, Sparkles } from 'lucide-react'
+import ParticleHeadline from '../components/ParticleHeadline'
 
 const modes = [
   {
@@ -14,7 +15,7 @@ const modes = [
     dotColor: 'bg-blue-400',
     topLine: 'from-transparent via-blue-500/50 to-transparent',
     href: '/live',
-    description: 'Host webinars with AI-powered Q&A, live reactions, and intelligent audience engagement that adapts to your room in real time.',
+    description: 'Host webinars with AI-powered Q&A, live reactions, and intelligent audience engagement that adapts to your room.',
     features: ['AI synthesises audience questions', 'Real-time participant tracking', 'Live polls & reactions', 'In-session knowledge capture'],
   },
   {
@@ -64,17 +65,17 @@ const stats = [
 export default function Landing() {
   return (
     <div className="min-h-screen relative">
-      {/* Ambient background glow */}
+      {/* Ambient glow */}
       <div className="fixed inset-0 -z-10 overflow-hidden pointer-events-none">
-        <div className="absolute -top-32 left-[10%] w-[600px] h-[600px] bg-blue-600/[0.055] rounded-full blur-[120px]" />
-        <div className="absolute top-[40%] right-[5%] w-[450px] h-[450px] bg-violet-600/[0.045] rounded-full blur-[100px]" />
-        <div className="absolute bottom-[15%] left-[35%] w-[400px] h-[400px] bg-emerald-600/[0.035] rounded-full blur-[100px]" />
+        <div className="absolute -top-32 left-[10%] w-[600px] h-[600px] bg-blue-600/[0.055] rounded-full blur-[130px]" />
+        <div className="absolute top-[40%] right-[5%] w-[450px] h-[450px] bg-violet-600/[0.04] rounded-full blur-[110px]" />
+        <div className="absolute bottom-[15%] left-[35%] w-[400px] h-[400px] bg-emerald-600/[0.03] rounded-full blur-[100px]" />
       </div>
 
       {/* Hero */}
-      <section className="px-6 lg:px-10 pt-16 pb-12 max-w-[1100px] mx-auto">
-        {/* Status pill */}
-        <div className="flex items-center gap-3 mb-10">
+      <section className="px-6 lg:px-10 pt-14 pb-10 max-w-[1100px] mx-auto">
+        {/* Status row */}
+        <div className="flex items-center gap-3 mb-8">
           <div className="inline-flex items-center gap-2.5 px-3.5 py-1.5 rounded-full border border-white/[0.08] bg-white/[0.03] backdrop-blur-sm">
             <span className="relative flex h-1.5 w-1.5">
               <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-60" />
@@ -88,24 +89,12 @@ export default function Landing() {
           </span>
         </div>
 
-        {/* Headline */}
-        <h1 className="text-[clamp(2.6rem,6.5vw,5.2rem)] font-extrabold leading-[0.9] tracking-tight mb-7">
-          <span className="text-white block">Not another</span>
-          <span
-            className="block"
-            style={{
-              background: 'linear-gradient(135deg, #60A5FA 0%, #A78BFA 50%, #34D399 100%)',
-              WebkitBackgroundClip: 'text',
-              WebkitTextFillColor: 'transparent',
-              backgroundClip: 'text',
-            }}
-          >
-            webinar tool.
-          </span>
-        </h1>
+        {/* Particle headline */}
+        <ParticleHeadline />
 
-        <p className="text-[1.05rem] text-[#6B6B85] max-w-[480px] leading-relaxed mb-10 font-light">
-          Agentic AI that listens, learns, and responds — delivering a personalised intelligence layer to every participant in the room.
+        {/* Subtitle + CTAs */}
+        <p className="text-[1.05rem] text-[#6B6B85] max-w-[460px] leading-relaxed mt-6 mb-8 font-light">
+          Agentic AI that listens, learns, and responds — delivering a personalised intelligence layer to every participant.
         </p>
 
         <div className="flex flex-wrap items-center gap-3">
@@ -134,12 +123,10 @@ export default function Landing() {
               <Link
                 key={mode.id}
                 to={mode.href}
-                className={`group relative flex flex-col p-6 rounded-2xl border bg-white/[0.02] hover:bg-white/[0.035] transition-all duration-300 cursor-pointer ${mode.cardBorder}`}
+                className={`group relative flex flex-col p-6 rounded-2xl border bg-white/[0.02] hover:bg-white/[0.035] transition-all duration-300 ${mode.cardBorder}`}
               >
-                {/* Top gradient line */}
                 <div className={`absolute top-0 inset-x-8 h-px bg-gradient-to-r ${mode.topLine}`} />
 
-                {/* Tag + icon row */}
                 <div className="flex items-start justify-between mb-5">
                   <span className="text-[11px] font-mono text-[#3A3A50] tracking-wider">{mode.tag}</span>
                   <div className={`p-2.5 rounded-xl ${mode.iconBg}`}>
@@ -147,16 +134,13 @@ export default function Landing() {
                   </div>
                 </div>
 
-                {/* Title */}
                 <div className="mb-4">
                   <h3 className="text-2xl font-bold text-white tracking-tight mb-1">{mode.title}</h3>
                   <p className={`text-xs font-medium ${mode.color} opacity-70`}>{mode.subtitle}</p>
                 </div>
 
-                {/* Description */}
                 <p className="text-sm text-[#6B6B85] leading-relaxed mb-5 flex-1">{mode.description}</p>
 
-                {/* Features */}
                 <ul className="space-y-1.5 mb-5">
                   {mode.features.map((f) => (
                     <li key={f} className="flex items-center gap-2 text-xs text-[#4A4A5A]">
@@ -166,7 +150,6 @@ export default function Landing() {
                   ))}
                 </ul>
 
-                {/* CTA */}
                 <div className={`flex items-center gap-1.5 text-xs ${mode.color} opacity-50 group-hover:opacity-100 transition-opacity font-medium`}>
                   Open {mode.title}
                   <ArrowRight size={11} className="group-hover:translate-x-0.5 transition-transform" />
@@ -177,7 +160,7 @@ export default function Landing() {
         </div>
       </section>
 
-      {/* Bottom strip: stats + AI layer */}
+      {/* Stats + unified AI layer */}
       <section className="px-6 lg:px-10 pb-20 max-w-[1100px] mx-auto">
         <div className="grid grid-cols-2 lg:grid-cols-[1fr_1fr_1fr_2.2fr] gap-3">
           {stats.map(({ value, label }) => (
@@ -187,7 +170,6 @@ export default function Landing() {
             </div>
           ))}
 
-          {/* Unified AI layer card */}
           <div className="col-span-2 lg:col-span-1 p-5 rounded-2xl border border-white/[0.06] bg-white/[0.02]">
             <div className="flex items-center gap-2 mb-3">
               <div className="w-5 h-5 rounded-md bg-amber-500/15 flex items-center justify-center">
@@ -203,7 +185,7 @@ export default function Landing() {
                 <div
                   key={label}
                   title={desc}
-                  className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-white/[0.04] border border-white/[0.06] cursor-default"
+                  className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-white/[0.04] border border-white/[0.06]"
                 >
                   <PIcon size={11} className="text-[#8888AA]" />
                   <span className="text-[11px] text-[#8888AA] font-medium">{label}</span>
