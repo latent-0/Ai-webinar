@@ -5,9 +5,10 @@ import {
   ScreenShare, MoreHorizontal, Send, ZoomIn, ZoomOut,
   MousePointer2, Move, Type, Frame, Maximize2, Magnet,
   ExternalLink, Lock, Ruler, Grid3x3,
-  Plus, Copy, Trash2, Focus, BookOpen,
-  ToggleLeft, ToggleRight, Sparkles, Code2, ChevronDown
+  Plus, Copy, Trash2, Focus, BookOpen, Brain,
+  ToggleLeft, ToggleRight, Sparkles, Code2, ChevronDown, Loader2
 } from 'lucide-react'
+import { askGemini } from '../lib/gemini'
 
 // ─── Data & Types ────────────────────────────────────────────────────────────
 
@@ -406,6 +407,80 @@ export default function Workspace() {
   const [snapToGrid, setSnapToGrid] = useState(true)
   const [activeTool, setActiveTool] = useState('cursor')
 
+  // AI state — Learn panel
+  const [learnQuery, setLearnQuery] = useState('')
+  const [learnLoading, setLearnLoading] = useState(false)
+  const [learnMessages, setLearnMessages] = useState<Array<{ id: string; role: 'user' | 'ai'; text: string }>>([])
+  const learnEndRef = useRef<HTMLDivElement>(null)
+
+  // AI state — Play panel
+  const [playPrompt, setPlayPrompt] = useState('Futuristic race car, motion blur, cinematic, 16:9')
+  const [playLoading, setPlayLoading] = useState(false)
+  const [playOutput, setPlayOutput] = useState('')
+
+  // AI state — Chat AI assistant
+  const [chatAiLoading, setChatAiLoading] = useState(false)
+
+  useEffect(() => { learnEndRef.current?.scrollIntoView({ behavior: 'smooth' }) }, [learnMessages])
+
+  async function askLearnAI(e: React.FormEvent) {
+    e.preventDefault()
+    if (!learnQuery.trim() || learnLoading) return
+    const q = learnQuery.trim()
+    setLearnQuery('')
+    setLearnMessages((prev) => [...prev, { id: Date.now().toString(), role: 'user', text: q }])
+    setLearnLoading(true)
+    try {
+      const answer = await askGemini(q, `Live webinar session room: ${roomId}. You are an AI assistant helping attendees understand the session content.`)
+      setLearnMessages((prev) => [...prev, { id: (Date.now() + 1).toString(), role: 'ai', text: answer }])
+    } catch {
+      setLearnMessages((prev) => [...prev, { id: (Date.now() + 1).toString(), role: 'ai', text: 'Unable to reach AI. Please check your connection.' }])
+    } finally {
+      setLearnLoading(false)
+    }
+  }
+
+  async function runPlayground() {
+    if (!playPrompt.trim() || playLoading) return
+    setPlayLoading(true)
+    setPlayOutput('')
+    try {
+      const result = await askGemini(
+        `Act as an AI image generation API. Given this prompt: "${playPrompt}", describe what a high-quality generated image would look like. Include style, composition, lighting, color palette, and mood in 3-4 sentences. Then suggest 3 prompt variations to improve it.`,
+        'AI image generation playground'
+      )
+      setPlayOutput(result)
+    } catch {
+      setPlayOutput('API error — check your Gemini key in .env.local')
+    } finally {
+      setPlayLoading(false)
+    }
+  }
+
+  async function sendChatWithAI(e: React.FormEvent) {
+    e.preventDefault()
+    if (!chatInput.trim()) return
+    const msg = chatInput.trim()
+    setChatInput('')
+    setChatMessages((prev) => [
+      ...prev,
+      { id: String(Date.now()), user: 'You', initials: 'YO', color: '#6366F1', time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }), text: msg },
+    ])
+    // If message looks like a question, get an AI response
+    if (msg.includes('?') || msg.toLowerCase().startsWith('what') || msg.toLowerCase().startsWith('how') || msg.toLowerCase().startsWith('can') || msg.toLowerCase().startsWith('why')) {
+      setChatAiLoading(true)
+      try {
+        const answer = await askGemini(msg, `Live webinar room: ${roomId}. Respond briefly as an AI assistant to this participant question.`)
+        setChatMessages((prev) => [
+          ...prev,
+          { id: String(Date.now() + 1), user: 'AI Assistant', initials: 'AI', color: '#6366F1', time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }), text: answer },
+        ])
+      } finally {
+        setChatAiLoading(false)
+      }
+    }
+  }
+
   // Draggable canvas nodes
   const [nodePositions, setNodePositions] = useState<Record<string, { x: number; y: number }>>(NODE_INIT_POS)
   const draggingRef = useRef<{ id: string; ox: number; oy: number } | null>(null)
@@ -649,11 +724,17 @@ export default function Workspace() {
           </div>
         ))}
       </div>
-      <form onSubmit={sendChat} className="flex items-center gap-2 px-3 py-2 border-t border-[#E4E4EC] flex-shrink-0">
+      {chatAiLoading && (
+        <div className="flex items-center gap-2 px-3 py-1.5 border-t border-[#E4E4EC] bg-indigo-50/50">
+          <Brain size={10} className="text-indigo-400 animate-pulse" />
+          <span className="text-[10px] text-indigo-500">AI is responding…</span>
+        </div>
+      )}
+      <form onSubmit={sendChatWithAI} className="flex items-center gap-2 px-3 py-2 border-t border-[#E4E4EC] flex-shrink-0">
         <input
           value={chatInput}
           onChange={(e) => setChatInput(e.target.value)}
-          placeholder="Say something..."
+          placeholder="Say something… (questions get AI replies)"
           className="flex-1 text-[11px] text-[#111827] placeholder-[#9CA3AF] bg-[#F9FAFB] border border-[#E4E4EC] rounded-lg px-2 py-1.5 focus:outline-none focus:border-indigo-300 min-w-0"
         />
         <button type="submit" className="w-6 h-6 flex items-center justify-center rounded-lg bg-indigo-600 text-white hover:bg-indigo-700 transition-colors flex-shrink-0">
@@ -805,41 +886,59 @@ export default function Workspace() {
       </div>
       <div className="flex-1 overflow-y-auto px-3 py-3 min-h-0">
         {learnTab === 'notes' && (
-          <div className="space-y-4">
-            <div>
-              <h4 className="text-[10px] font-semibold text-[#111827] uppercase tracking-wider mb-2">Key Takeaways</h4>
-              <ul className="space-y-1.5">
-                {[
-                  'Strong briefs lead to better AI output.',
-                  'Use references to guide style and tone.',
-                  'Iterate with small changes, not big jumps.',
-                  'Test across models for different results.',
-                  'Keep human judgment in the loop.',
-                ].map((item, i) => (
-                  <li key={i} className="flex items-start gap-2">
-                    <span className="w-4 h-4 rounded-full bg-indigo-100 text-indigo-600 flex items-center justify-center text-[8px] font-bold flex-shrink-0 mt-0.5">{i + 1}</span>
-                    <p className="text-[11px] text-[#374151] leading-relaxed">{item}</p>
-                  </li>
-                ))}
-              </ul>
-            </div>
-            <div>
-              <div className="flex items-center justify-between mb-1.5">
-                <h4 className="text-[10px] font-semibold text-[#111827] uppercase tracking-wider">Summary</h4>
-                <button className="text-[#9CA3AF] hover:text-[#6B7280] transition-colors"><Copy size={11} /></button>
+          <div className="space-y-3">
+            {learnMessages.length === 0 && (
+              <div className="text-center py-6">
+                <Brain size={24} className="text-[#D1D5DB] mx-auto mb-2" />
+                <p className="text-[11px] text-[#9CA3AF]">Ask the AI anything about this session.</p>
               </div>
-              <p className="text-[11px] text-[#374151] leading-relaxed p-2.5 bg-[#F9FAFB] rounded-lg border border-[#E4E4EC]">
-                Today we explored a full creative workflow using AI — from writing tight briefs to generating polished outputs across multiple models.
-              </p>
-            </div>
+            )}
+            {learnMessages.map((m) => (
+              <div key={m.id} className={`flex gap-2 ${m.role === 'user' ? 'justify-end' : 'justify-start'}`}>
+                {m.role === 'ai' && (
+                  <div className="w-5 h-5 rounded-full bg-indigo-100 flex items-center justify-center flex-shrink-0 mt-0.5">
+                    <Brain size={10} className="text-indigo-600" />
+                  </div>
+                )}
+                <div className={`max-w-[90%] px-2.5 py-2 rounded-lg text-[11px] leading-relaxed ${
+                  m.role === 'user'
+                    ? 'bg-indigo-600 text-white'
+                    : 'bg-[#F9FAFB] border border-[#E4E4EC] text-[#374151] whitespace-pre-wrap'
+                }`}>
+                  {m.text}
+                </div>
+              </div>
+            ))}
+            {learnLoading && (
+              <div className="flex items-center gap-2">
+                <div className="w-5 h-5 rounded-full bg-indigo-100 flex items-center justify-center flex-shrink-0">
+                  <Brain size={10} className="text-indigo-600" />
+                </div>
+                <div className="flex gap-1 px-2.5 py-2 rounded-lg bg-[#F9FAFB] border border-[#E4E4EC]">
+                  {[0, 150, 300].map((d) => (
+                    <span key={d} className="w-1.5 h-1.5 rounded-full bg-indigo-400 animate-bounce" style={{ animationDelay: `${d}ms` }} />
+                  ))}
+                </div>
+              </div>
+            )}
+            <div ref={learnEndRef} />
           </div>
         )}
         {learnTab === 'transcript' && <p className="text-[11px] text-[#6B7280] italic">Transcript will appear here in real time during the session.</p>}
         {learnTab === 'sources' && <p className="text-[11px] text-[#6B7280] italic">No sources linked yet.</p>}
       </div>
-      <div className="px-3 py-2 border-t border-[#E4E4EC] flex-shrink-0">
-        <input placeholder="Ask a question about this session..." className="w-full text-[11px] text-[#111827] placeholder-[#9CA3AF] bg-[#F9FAFB] border border-[#E4E4EC] rounded-lg px-3 py-2 focus:outline-none focus:border-indigo-300" />
-      </div>
+      <form onSubmit={askLearnAI} className="px-3 py-2 border-t border-[#E4E4EC] flex-shrink-0 flex gap-2">
+        <input
+          value={learnQuery}
+          onChange={(e) => setLearnQuery(e.target.value)}
+          placeholder="Ask about this session…"
+          className="flex-1 text-[11px] text-[#111827] placeholder-[#9CA3AF] bg-[#F9FAFB] border border-[#E4E4EC] rounded-lg px-3 py-2 focus:outline-none focus:border-indigo-300 min-w-0"
+        />
+        <button type="submit" disabled={!learnQuery.trim() || learnLoading}
+          className="w-7 h-7 flex items-center justify-center rounded-lg bg-indigo-600 text-white hover:bg-indigo-700 disabled:opacity-40 transition-colors flex-shrink-0">
+          {learnLoading ? <Loader2 size={11} className="animate-spin" /> : <Send size={11} />}
+        </button>
+      </form>
     </div>
   )
 
@@ -881,20 +980,37 @@ export default function Workspace() {
               <span className="text-[10px] font-mono text-[#6B7280]">/v1/generate</span>
             </div>
             <div>
-              <span className="text-[10px] font-semibold text-[#374151] block mb-1">Body</span>
-              <pre className="text-[10px] font-mono bg-[#F9FAFB] border border-[#E4E4EC] rounded-lg p-2 text-[#374151] overflow-x-auto leading-relaxed">{`{\n  "prompt": "Futuristic race car, motion blur, cinematic",\n  "style": "cinematic",\n  "ar": "16:9"\n}`}</pre>
+              <span className="text-[10px] font-semibold text-[#374151] block mb-1">Prompt</span>
+              <textarea
+                value={playPrompt}
+                onChange={(e) => setPlayPrompt(e.target.value)}
+                rows={3}
+                className="w-full text-[10px] font-mono bg-[#F9FAFB] border border-[#E4E4EC] rounded-lg p-2 text-[#374151] leading-relaxed resize-none focus:outline-none focus:border-violet-300"
+              />
             </div>
-            <button className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-blue-600 text-white text-[10px] font-medium hover:bg-blue-700 transition-colors ml-auto">
-              <Send size={10} /> Send
+            <button
+              onClick={runPlayground}
+              disabled={playLoading || !playPrompt.trim()}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-violet-600 text-white text-[10px] font-medium hover:bg-violet-700 disabled:opacity-40 transition-colors ml-auto"
+            >
+              {playLoading ? <Loader2 size={10} className="animate-spin" /> : <Send size={10} />}
+              {playLoading ? 'Running…' : 'Run'}
             </button>
-            <div>
-              <span className="text-[10px] font-semibold text-[#374151] block mb-1">Response</span>
+            {playOutput && (
+              <div>
+                <span className="text-[10px] font-semibold text-[#374151] block mb-1">AI Response</span>
+                <div className="text-[10px] text-[#374151] bg-[#F9FAFB] border border-[#E4E4EC] rounded-lg p-2 leading-relaxed whitespace-pre-wrap max-h-32 overflow-y-auto">
+                  {playOutput}
+                </div>
+              </div>
+            )}
+            {!playOutput && !playLoading && (
               <div className="grid grid-cols-3 gap-1.5">
                 {[0, 1, 2].map((i) => (
-                  <div key={i} className="h-12 rounded-lg" style={{ background: `linear-gradient(135deg, #1e1b4b ${i * 20}%, #312e81)` }} />
+                  <div key={i} className="h-10 rounded-lg" style={{ background: `linear-gradient(135deg, #1e1b4b ${i * 20}%, #312e81)` }} />
                 ))}
               </div>
-            </div>
+            )}
           </div>
         )}
         {playTab !== 'api' && (
