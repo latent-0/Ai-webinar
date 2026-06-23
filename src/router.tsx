@@ -2,60 +2,37 @@ import { createRouter, createRoute, createRootRoute, Outlet } from '@tanstack/re
 import RootLayout from './components/layout/RootLayout'
 import Landing from './pages/Landing'
 import Live from './pages/Live'
-import LiveRoom from './pages/LiveRoom'
+import Workspace from './pages/Workspace'
 import Learn from './pages/Learn'
 import Play from './pages/Play'
 
-const rootRoute = createRootRoute({
-  component: () => (
-    <RootLayout>
-      <Outlet />
-    </RootLayout>
-  ),
-})
+const rootRoute = createRootRoute({ component: () => <Outlet /> })
 
-const indexRoute = createRoute({
+const layoutRoute = createRoute({
   getParentRoute: () => rootRoute,
-  path: '/',
-  component: Landing,
+  id: 'layout',
+  component: () => <RootLayout><Outlet /></RootLayout>,
 })
 
-const liveRoute = createRoute({
-  getParentRoute: () => rootRoute,
-  path: '/live',
-  component: Live,
-})
+const indexRoute = createRoute({ getParentRoute: () => layoutRoute, path: '/', component: Landing })
+const liveRoute = createRoute({ getParentRoute: () => layoutRoute, path: '/live', component: Live })
+const learnRoute = createRoute({ getParentRoute: () => layoutRoute, path: '/learn', component: Learn })
+const playRoute = createRoute({ getParentRoute: () => layoutRoute, path: '/play', component: Play })
 
-const liveRoomRoute = createRoute({
+// Full-screen — NO layout wrapper
+const workspaceRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: '/live/$roomId',
-  component: LiveRoom,
-})
-
-const learnRoute = createRoute({
-  getParentRoute: () => rootRoute,
-  path: '/learn',
-  component: Learn,
-})
-
-const playRoute = createRoute({
-  getParentRoute: () => rootRoute,
-  path: '/play',
-  component: Play,
+  component: Workspace,
 })
 
 const routeTree = rootRoute.addChildren([
-  indexRoute,
-  liveRoute,
-  liveRoomRoute,
-  learnRoute,
-  playRoute,
+  layoutRoute.addChildren([indexRoute, liveRoute, learnRoute, playRoute]),
+  workspaceRoute,
 ])
 
 export const router = createRouter({ routeTree })
 
 declare module '@tanstack/react-router' {
-  interface Register {
-    router: typeof router
-  }
+  interface Register { router: typeof router }
 }
