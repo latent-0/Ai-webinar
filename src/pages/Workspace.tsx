@@ -6,9 +6,23 @@ import {
   Settings, Play, MousePointer2, Type, Square, Maximize2, Minimize2,
   FileText, Sparkles, Lightbulb, MessageSquare, Package,
   Send, Users, Brain, Plus, X, Minus, ChevronDown, GitBranch, Trash2,
+  Mic, MicOff, Video, VideoOff, Check, Copy, BookOpen, Cpu, Wrench as WrenchIcon,
+  PhoneOff, Radio,
 } from 'lucide-react'
 import { useAppStore } from '../store'
 import { askGemini } from '../lib/gemini'
+
+declare global {
+  interface Window {
+    JitsiMeetExternalAPI: new (domain: string, options: Record<string, unknown>) => {
+      addEventListeners: (listeners: Record<string, () => void>) => void
+      executeCommand: (cmd: string, ...args: unknown[]) => void
+      isAudioMuted: () => Promise<boolean>
+      isVideoMuted: () => Promise<boolean>
+      dispose: () => void
+    }
+  }
+}
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -157,6 +171,57 @@ export default function Workspace() {
   const sliderTrackRef = useRef<HTMLDivElement>(null)
   const chatEndRef    = useRef<HTMLDivElement>(null)
   const learnEndRef   = useRef<HTMLDivElement>(null)
+  const jitsiContainerRef = useRef<HTMLDivElement>(null)
+  const jitsiApiRef   = useRef<InstanceType<typeof window.JitsiMeetExternalAPI> | null>(null)
+
+  // ── Meet state ───────────────────────────────────────────────────────────────
+  const [jitsiLoaded, setJitsiLoaded]     = useState(false)
+  const [participantCount, setParticipantCount] = useState(1)
+  const [micMuted, setMicMuted]           = useState(true)
+  const [camMuted, setCamMuted]           = useState(false)
+
+  // ── Notifications ─────────────────────────────────────────────────────────────
+  const [showNotif, setShowNotif]         = useState(false)
+  const [notifications] = useState([
+    { id:'1', text:'Sophie joined the session', time:'just now' },
+    { id:'2', text:'AI Notes updated', time:'2m ago' },
+    { id:'3', text:'New canvas node connected', time:'5m ago' },
+  ])
+
+  // ── Share/Save ────────────────────────────────────────────────────────────────
+  const [copied, setCopied]               = useState(false)
+  const [savedLayouts, setSavedLayouts]   = useState<string[]>([])
+
+  // ── Transcript / Sources ──────────────────────────────────────────────────────
+  const [transcript, setTranscript]       = useState<string|null>(null)
+  const [transcriptLoading, setTranscriptLoading] = useState(false)
+  const [sources] = useState([
+    { title: 'AI Workflow Design Patterns', url: '#', domain: 'arxiv.org' },
+    { title: 'Prompt Engineering Guide', url: '#', domain: 'promptingguide.ai' },
+    { title: 'Creative Brief Templates', url: '#', domain: 'notion.so' },
+    { title: 'Midjourney V6 Docs', url: '#', domain: 'midjourney.com' },
+  ])
+
+  // ── Playground prompts/models ─────────────────────────────────────────────────
+  const PROMPT_LIBRARY = [
+    { label: 'Cinematic portrait', prompt: 'Ultra-realistic cinematic portrait, golden hour lighting, shallow depth of field, 85mm lens' },
+    { label: 'Abstract tech', prompt: 'Abstract technology visualization, neural network nodes, glowing edges, dark background, 8k' },
+    { label: 'Product hero', prompt: 'Luxury product hero shot, studio lighting, white background, reflective surface, advertisement quality' },
+    { label: 'Sci-fi landscape', prompt: 'Epic sci-fi landscape, distant planets, alien flora, volumetric fog, concept art style' },
+  ]
+  const MODELS = [
+    { id: 'gemini-2.5-flash', label: 'Gemini 2.5 Flash', badge: 'Fast', active: true },
+    { id: 'gemini-2.5-pro', label: 'Gemini 2.5 Pro', badge: 'Smart', active: false },
+    { id: 'gemini-2.0-flash', label: 'Gemini 2.0 Flash', badge: 'Stable', active: false },
+  ]
+  const [activeModel, setActiveModel]     = useState('gemini-2.5-flash')
+  const TOOLS_LIST = [
+    { id: 'web_search', label: 'Web Search', desc: 'Search the web for current info', enabled: true },
+    { id: 'code_exec', label: 'Code Execution', desc: 'Run code and return output', enabled: false },
+    { id: 'image_gen', label: 'Image Generation', desc: 'Generate images from prompts', enabled: true },
+    { id: 'doc_parse', label: 'Document Parser', desc: 'Extract info from docs/PDFs', enabled: false },
+  ]
+  const [enabledTools, setEnabledTools]   = useState<string[]>(['web_search', 'image_gen'])
 
   // ── Derived ──────────────────────────────────────────────────────────────────
   const layout = LAYOUT_CFGS[activeLayout] ?? LAYOUT_CFGS.canvas
@@ -205,6 +270,50 @@ export default function Workspace() {
 
   useEffect(() => { chatEndRef.current?.scrollIntoView({ behavior:'smooth' }) }, [chatMsgs])
   useEffect(() => { learnEndRef.current?.scrollIntoView({ behavior:'smooth' }) }, [learnMsgs])
+
+  // Load Jitsi script once
+  useEffect(() => {
+    if (document.getElementById('jitsi-api-script')) { setJitsiLoaded(true); return }
+    const s = document.createElement('script')
+    s.id = 'jitsi-api-script'
+    s.src = 'https://meet.jit.si/external_api.js'
+    s.async = true
+    s.onload = () => setJitsiLoaded(true)
+    document.body.appendChild(s)
+  }, [])
+
+  // Init Jitsi when script ready + container visible
+  useEffect(() => {
+    if (!jitsiLoaded || !jitsiContainerRef.current || layout.videoH === 0) return
+    if (jitsiApiRef.current) { jitsiApiRef.current.dispose(); jitsiApiRef.current = null }
+    const api = new window.JitsiMeetExternalAPI('meet.jit.si', {
+      roomName: `sandbox-live-${roomId}`,
+      parentNode: jitsiContainerRef.current,
+      width: '100%',
+      height: '100%',
+      userInfo: { displayName: displayName || 'Guest', email: '' },
+      configOverwrite: {
+        startWithAudioMuted: true,
+        startWithVideoMuted: false,
+        prejoinPageEnabled: false,
+        disableDeepLinking: true,
+        toolbarButtons: [],
+      },
+      interfaceConfigOverwrite: {
+        MOBILE_APP_PROMO: false,
+        SHOW_CHROME_EXTENSION_BANNER: false,
+        DISABLE_JOIN_LEAVE_NOTIFICATIONS: false,
+        TOOLBAR_ALWAYS_VISIBLE: false,
+        FILM_STRIP_MAX_HEIGHT: 60,
+      },
+    })
+    api.addEventListeners({
+      participantJoined: () => setParticipantCount(c => c + 1),
+      participantLeft:   () => setParticipantCount(c => Math.max(1, c - 1)),
+    })
+    jitsiApiRef.current = api
+    return () => { api.dispose(); jitsiApiRef.current = null }
+  }, [jitsiLoaded, roomId, displayName]) // eslint-disable-line react-hooks/exhaustive-deps
 
   // ── Handlers ─────────────────────────────────────────────────────────────────
 
@@ -299,6 +408,48 @@ export default function Workspace() {
     setUserNodes([])
   }
 
+  async function shareRoom() {
+    const url = `${window.location.origin}/live/${roomId}`
+    await navigator.clipboard.writeText(url)
+    setCopied(true)
+    setTimeout(() => setCopied(false), 2000)
+  }
+
+  function saveCurrentLayout() {
+    if (!savedLayouts.includes(activeLayout)) {
+      setSavedLayouts(prev => [...prev, activeLayout])
+    }
+  }
+
+  function toggleMic() {
+    jitsiApiRef.current?.executeCommand('toggleAudio')
+    setMicMuted(m => !m)
+  }
+
+  function toggleCam() {
+    jitsiApiRef.current?.executeCommand('toggleVideo')
+    setCamMuted(c => !c)
+  }
+
+  function hangUp() {
+    jitsiApiRef.current?.executeCommand('hangup')
+    navigate({ to: '/live' })
+  }
+
+  async function generateTranscript() {
+    if (transcriptLoading) return
+    setTranscriptLoading(true)
+    try {
+      const t = await askGemini(
+        `Generate a realistic 5-minute webinar transcript excerpt for room "${roomId}". Include speaker names (Host, Sophie, Alex), timestamps, and natural conversation about AI creative workflows.`,
+        'You are a transcript generator. Output clean, realistic transcript text with timestamps in [MM:SS] format.'
+      )
+      setTranscript(t)
+    } finally {
+      setTranscriptLoading(false)
+    }
+  }
+
   // ── Render ────────────────────────────────────────────────────────────────────
 
   return (
@@ -332,10 +483,34 @@ export default function Workspace() {
           <span className="text-[10px] font-semibold bg-indigo-50 text-indigo-600 px-1.5 py-0.5 rounded-full">{mix.live}:{mix.learn}:{mix.play}</span>
         </button>
         <div className="w-px h-5 bg-[#E8E8EF]"/>
-        <button className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg hover:bg-[#F7F7FA] text-sm font-medium text-[#374151] transition-colors"><Share2 size={13}/> Share</button>
-        <button className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg hover:bg-[#F7F7FA] text-sm font-medium text-[#374151] transition-colors"><Save size={13}/> Save layout</button>
+        <button onClick={shareRoom}
+          className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg hover:bg-[#F7F7FA] text-sm font-medium text-[#374151] transition-colors">
+          {copied ? <Check size={13} className="text-emerald-500"/> : <Share2 size={13}/>}
+          {copied ? 'Copied!' : 'Share'}
+        </button>
+        <button onClick={saveCurrentLayout}
+          className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg hover:bg-[#F7F7FA] text-sm font-medium transition-colors ${savedLayouts.includes(activeLayout)?'text-emerald-600':'text-[#374151]'}`}>
+          {savedLayouts.includes(activeLayout) ? <Check size={13}/> : <Save size={13}/>}
+          {savedLayouts.includes(activeLayout) ? 'Saved' : 'Save layout'}
+        </button>
         <button className="p-2 rounded-lg hover:bg-[#F7F7FA] text-[#6B7280] transition-colors"><Grid3X3 size={14}/></button>
-        <button className="p-2 rounded-lg hover:bg-[#F7F7FA] text-[#6B7280] transition-colors"><Bell size={14}/></button>
+        <div className="relative">
+          <button onClick={()=>setShowNotif(n=>!n)}
+            className="p-2 rounded-lg hover:bg-[#F7F7FA] text-[#6B7280] transition-colors relative">
+            <Bell size={14}/>
+            <span className="absolute top-1 right-1 w-1.5 h-1.5 bg-rose-500 rounded-full"/>
+          </button>
+          {showNotif && (
+            <div className="absolute right-0 top-10 w-64 bg-white border border-[#E8E8EF] rounded-xl shadow-lg z-50 py-1">
+              {notifications.map(n=>(
+                <div key={n.id} className="px-4 py-2.5 hover:bg-[#F7F7FA] transition-colors cursor-default">
+                  <p className="text-xs text-[#374151]">{n.text}</p>
+                  <p className="text-[10px] text-[#9CA3AF] mt-0.5">{n.time}</p>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
         <div className="w-7 h-7 rounded-full bg-indigo-600 flex items-center justify-center text-white text-xs font-bold cursor-pointer">
           {(displayName||'U')[0].toUpperCase()}
         </div>
@@ -450,19 +625,53 @@ export default function Workspace() {
         >
           {effectiveLeft > 0 && (
             <>
-              {/* Video */}
-              <div className="bg-[#0f0f13] relative shrink-0 overflow-hidden transition-all duration-300"
-                style={{height: layout.videoH}}>
-                <div className="absolute inset-0 flex items-center justify-center">
-                  <div className="w-20 h-20 rounded-full bg-[#1f1f2e] flex items-center justify-center">
-                    <span className="text-2xl font-bold text-white">{(displayName||'Y')[0].toUpperCase()}</span>
+              {/* Video / Meet */}
+              {layout.videoH > 0 && (
+                <div className="bg-[#0f0f13] relative shrink-0 overflow-hidden transition-all duration-300"
+                  style={{height: layout.videoH}}>
+                  {/* Jitsi iframe fills the container */}
+                  <div ref={jitsiContainerRef} className="absolute inset-0"/>
+
+                  {/* Loading state overlay */}
+                  {!jitsiLoaded && (
+                    <div className="absolute inset-0 flex items-center justify-center bg-[#0f0f13]">
+                      <div className="text-center">
+                        <div className="w-6 h-6 border-2 border-indigo-400 border-t-transparent rounded-full animate-spin mx-auto mb-2"/>
+                        <p className="text-[10px] text-white/40">Connecting…</p>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* LIVE badge */}
+                  <div className="absolute top-2 left-2 z-10 flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-rose-500 text-white text-[10px] font-bold pointer-events-none">
+                    <Radio size={9}/> LIVE
+                  </div>
+
+                  {/* Participant count */}
+                  <div className="absolute top-2 right-2 z-10 flex items-center gap-1 px-2 py-0.5 rounded-full bg-black/50 text-white text-[10px]">
+                    <Users size={9}/> {participantCount}
+                  </div>
+
+                  {/* Controls overlay — bottom */}
+                  <div className="absolute bottom-0 left-0 right-0 z-10 flex items-center justify-center gap-2 p-2 bg-gradient-to-t from-black/70 to-transparent">
+                    <button onClick={toggleMic}
+                      className={`w-8 h-8 rounded-full flex items-center justify-center transition-colors ${micMuted?'bg-red-500 hover:bg-red-400':'bg-white/20 hover:bg-white/30'}`}
+                      title={micMuted?'Unmute':'Mute'}>
+                      {micMuted ? <MicOff size={13} className="text-white"/> : <Mic size={13} className="text-white"/>}
+                    </button>
+                    <button onClick={toggleCam}
+                      className={`w-8 h-8 rounded-full flex items-center justify-center transition-colors ${camMuted?'bg-red-500 hover:bg-red-400':'bg-white/20 hover:bg-white/30'}`}
+                      title={camMuted?'Start video':'Stop video'}>
+                      {camMuted ? <VideoOff size={13} className="text-white"/> : <Video size={13} className="text-white"/>}
+                    </button>
+                    <button onClick={hangUp}
+                      className="w-8 h-8 rounded-full bg-red-600 hover:bg-red-500 flex items-center justify-center transition-colors"
+                      title="Leave call">
+                      <PhoneOff size={13} className="text-white"/>
+                    </button>
                   </div>
                 </div>
-                <div className="absolute top-3 left-3 flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-rose-500 text-white text-[10px] font-bold">
-                  <span className="w-1.5 h-1.5 rounded-full bg-white animate-pulse"/> LIVE
-                </div>
-                <div className="absolute bottom-3 left-3 text-[10px] text-white/50 font-mono truncate max-w-[80%]">{roomId}</div>
-              </div>
+              )}
 
               {/* Chat */}
               <div className="flex flex-col flex-1 min-h-0">
@@ -672,6 +881,40 @@ export default function Workspace() {
                   ))}
                 </div>
                 <div className="overflow-y-auto flex-1 min-h-0 p-4 space-y-4">
+                  {activeLearnTab==='transcript' && (
+                    <div>
+                      {!transcript && !transcriptLoading && (
+                        <div className="text-center py-6">
+                          <p className="text-xs text-[#9CA3AF] mb-3">Auto-transcript from live session</p>
+                          <button onClick={generateTranscript}
+                            className="px-4 py-2 rounded-lg bg-indigo-50 hover:bg-indigo-100 text-indigo-600 text-xs font-medium transition-colors">
+                            <Sparkles size={10} className="inline mr-1"/>Generate Transcript
+                          </button>
+                        </div>
+                      )}
+                      {transcriptLoading && (
+                        <div className="flex gap-1 p-3">{[0,150,300].map(d=><span key={d} className="w-1.5 h-1.5 bg-indigo-400 rounded-full animate-bounce" style={{animationDelay:`${d}ms`}}/>)}</div>
+                      )}
+                      {transcript && (
+                        <div className="text-xs text-[#374151] leading-relaxed whitespace-pre-line font-mono">{transcript}</div>
+                      )}
+                    </div>
+                  )}
+                  {activeLearnTab==='sources' && (
+                    <div className="space-y-2">
+                      <p className="text-[10px] text-[#9CA3AF] uppercase tracking-wider mb-3">Referenced in this session</p>
+                      {sources.map((s,i)=>(
+                        <div key={i} className="flex items-start gap-2 p-2.5 rounded-lg border border-[#E8E8EF] hover:border-indigo-200 hover:bg-indigo-50/40 transition-colors cursor-pointer group">
+                          <BookOpen size={12} className="text-[#9CA3AF] group-hover:text-indigo-500 mt-0.5 shrink-0"/>
+                          <div className="flex-1 min-w-0">
+                            <p className="text-xs font-medium text-[#374151] leading-tight">{s.title}</p>
+                            <p className="text-[10px] text-[#9CA3AF] mt-0.5">{s.domain}</p>
+                          </div>
+                          <ExternalLink size={10} className="text-[#D1D5DB] group-hover:text-indigo-400 shrink-0 mt-0.5"/>
+                        </div>
+                      ))}
+                    </div>
+                  )}
                   {activeLearnTab==='notes' && learnMsgs.length===0 && (
                     <>
                       <div>
@@ -754,9 +997,50 @@ export default function Workspace() {
                         )}
                       </div>
                     </>
-                  ) : (
-                    <div className="flex items-center justify-center h-20 text-xs text-[#9CA3AF]">{activePlayTab.charAt(0).toUpperCase()+activePlayTab.slice(1)} coming soon</div>
-                  )}
+                  ) : activePlayTab==='prompts' ? (
+                    <div className="space-y-2">
+                      <p className="text-[10px] text-[#9CA3AF] uppercase tracking-wider mb-2">Prompt library</p>
+                      {PROMPT_LIBRARY.map((p,i)=>(
+                        <button key={i} onClick={()=>setApiBody(`{\n  "prompt": "${p.prompt}",\n  "style": "cinematic",\n  "ar": "16:9"\n}`)}
+                          className="w-full text-left p-2.5 rounded-lg border border-[#E8E8EF] hover:border-indigo-200 hover:bg-indigo-50/40 transition-colors group">
+                          <p className="text-xs font-medium text-[#374151] group-hover:text-indigo-700">{p.label}</p>
+                          <p className="text-[10px] text-[#9CA3AF] mt-0.5 leading-relaxed line-clamp-2">{p.prompt}</p>
+                        </button>
+                      ))}
+                    </div>
+                  ) : activePlayTab==='models' ? (
+                    <div className="space-y-2">
+                      <p className="text-[10px] text-[#9CA3AF] uppercase tracking-wider mb-2">Select model</p>
+                      {MODELS.map(m=>(
+                        <button key={m.id} onClick={()=>setActiveModel(m.id)}
+                          className={`w-full text-left p-2.5 rounded-lg border transition-colors flex items-center gap-3 ${activeModel===m.id?'border-indigo-300 bg-indigo-50':'border-[#E8E8EF] hover:border-indigo-200 hover:bg-[#F7F7FA]'}`}>
+                          <Cpu size={14} className={activeModel===m.id?'text-indigo-600':'text-[#9CA3AF]'}/>
+                          <div className="flex-1 min-w-0">
+                            <p className="text-xs font-medium text-[#374151]">{m.label}</p>
+                          </div>
+                          <span className={`px-1.5 py-0.5 rounded text-[9px] font-semibold ${activeModel===m.id?'bg-indigo-100 text-indigo-700':'bg-[#F7F7FA] text-[#9CA3AF]'}`}>{m.badge}</span>
+                          {activeModel===m.id && <Check size={12} className="text-indigo-600 shrink-0"/>}
+                        </button>
+                      ))}
+                    </div>
+                  ) : activePlayTab==='tools' ? (
+                    <div className="space-y-2">
+                      <p className="text-[10px] text-[#9CA3AF] uppercase tracking-wider mb-2">Function tools</p>
+                      {TOOLS_LIST.map(t=>(
+                        <div key={t.id} className="flex items-start gap-3 p-2.5 rounded-lg border border-[#E8E8EF]">
+                          <WrenchIcon size={13} className="text-[#9CA3AF] mt-0.5 shrink-0"/>
+                          <div className="flex-1 min-w-0">
+                            <p className="text-xs font-medium text-[#374151]">{t.label}</p>
+                            <p className="text-[10px] text-[#9CA3AF] mt-0.5">{t.desc}</p>
+                          </div>
+                          <button onClick={()=>setEnabledTools(prev=>prev.includes(t.id)?prev.filter(x=>x!==t.id):[...prev,t.id])}
+                            className={`shrink-0 w-8 h-4 rounded-full flex items-center px-0.5 transition-colors ${enabledTools.includes(t.id)?'bg-indigo-500':'bg-[#D1D5DB]'}`}>
+                            <div className={`w-3 h-3 bg-white rounded-full shadow transition-transform duration-200 ${enabledTools.includes(t.id)?'translate-x-4':''}`}/>
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  ) : null}
                 </div>
               </div>
             </>

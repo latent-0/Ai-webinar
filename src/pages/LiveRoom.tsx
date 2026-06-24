@@ -8,6 +8,9 @@ declare global {
   interface Window {
     JitsiMeetExternalAPI: new (domain: string, options: Record<string, unknown>) => {
       addEventListeners: (listeners: Record<string, () => void>) => void
+      executeCommand: (cmd: string, ...args: unknown[]) => void
+      isAudioMuted: () => Promise<boolean>
+      isVideoMuted: () => Promise<boolean>
       dispose: () => void
     }
   }
