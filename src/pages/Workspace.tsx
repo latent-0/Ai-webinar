@@ -1,658 +1,643 @@
-import { useState, useRef, useEffect, useCallback } from 'react'
+import { useState, useRef, useEffect } from 'react'
 import { useParams, useNavigate } from '@tanstack/react-router'
 import {
-  X, Share2, Users, Mic, MicOff, Video, VideoOff, ScreenShare,
-  MoreHorizontal, Send, Maximize2, BookOpen, Brain, Code2,
-  Sparkles, Loader2, GripVertical, Minimize2, ZoomIn, ZoomOut,
-  MousePointer2, Move, Type, Frame, Magnet, Grid3x3, Ruler,
-  Radio, Gamepad2, LayoutGrid, RefreshCw
+  Zap, Share2, Save, Bell, MoreHorizontal,
+  Layers, Ruler, Grid3X3, Magnet, Crosshair, ExternalLink, Lock, Settings,
+  Play, MousePointer2, Type, Square, Maximize2,
+  FileText, Sparkles, Lightbulb, MessageSquare, Package,
+  Send, Users, Brain, Plus, X, Minus, ChevronDown,
+  GitBranch,
 } from 'lucide-react'
+import { useAppStore } from '../store'
 import { askGemini } from '../lib/gemini'
 
-// ─── Panel system ─────────────────────────────────────────────────────────────
+// ─── Types ──────────────────────────────────────────────────────────────────
 
-interface PanelBox {
-  id: string
-  x: number
-  y: number
-  w: number
-  h: number
-  z: number
-  minimized: boolean
+interface ChatMsg { id: string; user: string; avatar: string; time: string; content: string }
+interface LearnMsg { id: string; role: 'user' | 'assistant'; content: string }
+
+// ─── Constants ──────────────────────────────────────────────────────────────
+
+const LAYOUTS = [
+  { id: 'presenter', label: 'Presenter Focus' },
+  { id: 'canvas',    label: 'Canvas Focus'    },
+  { id: 'learn',     label: 'Learn Focus'     },
+  { id: 'play',      label: 'Play Focus'      },
+  { id: 'balanced',  label: 'Balanced'        },
+  { id: 'workshop',  label: 'Workshop'        },
+  { id: 'copilot',   label: 'Co-Pilot'        },
+  { id: 'dual',      label: 'Dual Canvas'     },
+  { id: 'research',  label: 'Research Mode'   },
+  { id: 'build',     label: 'Build Mode'      },
+]
+
+const NODES = [
+  { id: 'brief',    x: 60,  y: 60,  w: 165, h: 115, title: 'Brief',    tag: '#creative-brief',  color: 'indigo',  icon: FileText,      preview: 'text',    badge: null  },
+  { id: 'insight',  x: 300, y: 60,  w: 165, h: 115, title: 'Insight',  tag: '#research',         color: 'violet',  icon: Sparkles,      preview: 'metric',  badge: null  },
+  { id: 'concept',  x: 540, y: 60,  w: 165, h: 115, title: 'Concept',  tag: '#ideation',         color: 'emerald', icon: Lightbulb,     preview: 'images',  badge: 'AI'  },
+  { id: 'prompt',   x: 60,  y: 265, w: 165, h: 115, title: 'Prompt',   tag: '#prompt-v1',        color: 'indigo',  icon: MessageSquare, preview: 'text2',   badge: 'v2'  },
+  { id: 'generate', x: 300, y: 265, w: 165, h: 115, title: 'Generate', tag: '#midjourney',       color: 'violet',  icon: Zap,           preview: 'images2', badge: null  },
+  { id: 'output',   x: 540, y: 265, w: 165, h: 115, title: 'Output',   tag: '#campaign-assets',  color: 'emerald', icon: Package,       preview: 'image3',  badge: null  },
+]
+
+const EDGES = [
+  { from: 'brief', to: 'insight' }, { from: 'insight', to: 'concept' },
+  { from: 'prompt', to: 'generate' }, { from: 'generate', to: 'output' },
+  { from: 'brief', to: 'prompt' }, { from: 'insight', to: 'generate' },
+  { from: 'concept', to: 'output' },
+]
+
+const INIT_CHAT: ChatMsg[] = [
+  { id: '1', user: 'Sophie', avatar: 'S', time: '10:34 AM', content: 'This workflow is 🔥'             },
+  { id: '2', user: 'Alex',   avatar: 'A', time: '10:34 AM', content: 'Can you show the prompt again?' },
+  { id: '3', user: 'Jordan', avatar: 'J', time: '10:25 AM', content: 'Loving the canvas!'              },
+  { id: '4', user: 'Taylor', avatar: 'T', time: '10:25 AM', content: 'What model are you using?'      },
+]
+
+const AVATAR_COLORS: Record<string, string> = {
+  S: 'bg-rose-500', A: 'bg-indigo-500', J: 'bg-emerald-500', T: 'bg-amber-500',
 }
 
-const SNAP = 8
-const MIN_W = 220
-const MIN_H = 160
-
-function snap(v: number) { return Math.round(v / SNAP) * SNAP }
-
-const DEFAULT_PANELS: PanelBox[] = [
-  { id: 'live',    x: 0,   y: 0,   w: 340, h: 380, z: 1, minimized: false },
-  { id: 'chat',    x: 0,   y: 388, w: 340, h: 240, z: 1, minimized: false },
-  { id: 'canvas',  x: 348, y: 0,   w: 560, h: 624, z: 1, minimized: false },
-  { id: 'learn',   x: 916, y: 0,   w: 320, h: 400, z: 1, minimized: false },
-  { id: 'play',    x: 916, y: 408, w: 320, h: 216, z: 1, minimized: false },
-]
-
-// ─── Canvas nodes ─────────────────────────────────────────────────────────────
-
-interface NodeDef { id: string; label: string; tag: string; badge?: string; color: string; bg: string; hasImages?: boolean; desc?: string }
-const NODE_DEFS: NodeDef[] = [
-  { id: 'brief',    label: 'Brief',    tag: 'INPUT',    color: '#7C3AED', bg: '#EDE9FE', desc: 'Creative direction' },
-  { id: 'insight',  label: 'Insight',  tag: 'ANALYSIS', badge: 'AI', color: '#2563EB', bg: '#DBEAFE', desc: 'AI insights' },
-  { id: 'concept',  label: 'Concept',  tag: 'OUTPUT',   color: '#059669', bg: '#D1FAE5', hasImages: true },
-  { id: 'prompt',   label: 'Prompt',   tag: 'CRAFT',    color: '#7C3AED', bg: '#EDE9FE', desc: 'Optimised prompt' },
-  { id: 'generate', label: 'Generate', tag: 'AI RUN',   badge: 'v2', color: '#2563EB', bg: '#DBEAFE', hasImages: true },
-  { id: 'output',   label: 'Output',   tag: 'FINAL',    color: '#059669', bg: '#D1FAE5', hasImages: true },
-]
-const NODE_INIT: Record<string, { x: number; y: number }> = {
-  brief: { x: 40, y: 60 }, insight: { x: 230, y: 60 }, concept: { x: 420, y: 60 },
-  prompt: { x: 40, y: 240 }, generate: { x: 230, y: 240 }, output: { x: 420, y: 240 },
+const NODE_STYLES: Record<string, { bg: string; border: string; iconBg: string; iconColor: string; tagBg: string; tagText: string; dot: string }> = {
+  indigo:  { bg: 'bg-indigo-50',  border: 'border-indigo-200',  iconBg: 'bg-indigo-100',  iconColor: 'text-indigo-600',  tagBg: 'bg-indigo-100',  tagText: 'text-indigo-700',  dot: 'bg-indigo-500'  },
+  violet:  { bg: 'bg-violet-50',  border: 'border-violet-200',  iconBg: 'bg-violet-100',  iconColor: 'text-violet-600',  tagBg: 'bg-violet-100',  tagText: 'text-violet-700',  dot: 'bg-violet-500'  },
+  emerald: { bg: 'bg-emerald-50', border: 'border-emerald-200', iconBg: 'bg-emerald-100', iconColor: 'text-emerald-600', tagBg: 'bg-emerald-100', tagText: 'text-emerald-700', dot: 'bg-emerald-500' },
 }
 
-// ─── Mock chat ────────────────────────────────────────────────────────────────
-const MOCK_CHAT = [
-  { id: '1', user: 'Alex Chen',   initials: 'AC', color: '#6366F1', time: '2:14 PM', text: 'Love the workflow canvas!' },
-  { id: '2', user: 'Maya Patel',  initials: 'MP', color: '#EC4899', time: '2:15 PM', text: 'Can you show how brief → output works?' },
-  { id: '3', user: 'Jordan Lee',  initials: 'JL', color: '#10B981', time: '2:16 PM', text: 'The playground is 🔥' },
-  { id: '4', user: 'Sam Torres',  initials: 'ST', color: '#F59E0B', time: '2:17 PM', text: 'What aspect ratio for cinematic?' },
-]
+function getEdgePath(from: typeof NODES[0], to: typeof NODES[0]) {
+  if (Math.abs(from.y - to.y) < 30) {
+    const x1 = from.x + from.w, y1 = from.y + from.h / 2
+    const x2 = to.x, y2 = to.y + to.h / 2
+    const mx = (x1 + x2) / 2
+    return `M ${x1} ${y1} C ${mx} ${y1} ${mx} ${y2} ${x2} ${y2}`
+  }
+  const x1 = from.x + from.w / 2, y1 = from.y + from.h
+  const x2 = to.x + to.w / 2, y2 = to.y
+  const my = (y1 + y2) / 2
+  return `M ${x1} ${y1} C ${x1} ${my} ${x2} ${my} ${x2} ${y2}`
+}
 
-// ─── Panel header ─────────────────────────────────────────────────────────────
-
-function PanelHeader({
-  title, icon, onDragStart, onMinimize, minimized, children,
-}: {
-  title: string
-  icon: React.ReactNode
-  onDragStart: (e: React.MouseEvent) => void
-  onMinimize: () => void
-  minimized: boolean
-  children?: React.ReactNode
-}) {
-  return (
-    <div
-      className="flex items-center gap-2 px-3 py-2.5 border-b border-[#F0F0F5] bg-white rounded-t-2xl flex-shrink-0 select-none cursor-grab active:cursor-grabbing"
-      onMouseDown={onDragStart}
-    >
-      <div className="flex items-center gap-2 flex-1 min-w-0 pointer-events-none">
-        {icon}
-        <span className="text-xs font-semibold text-[#111827] truncate">{title}</span>
-      </div>
-      <div className="flex items-center gap-1 pointer-events-auto" onMouseDown={(e) => e.stopPropagation()}>
-        {children}
-        <button onClick={onMinimize} className="w-5 h-5 flex items-center justify-center rounded text-[#9CA3AF] hover:bg-gray-100 hover:text-[#374151] transition-colors">
-          {minimized ? <Maximize2 size={10} /> : <Minimize2 size={10} />}
-        </button>
+function NodePreview({ type }: { type: string }) {
+  if (type === 'text') return (
+    <div className="space-y-1.5 px-0.5">
+      <div className="h-1.5 bg-gray-200 rounded-full w-full" />
+      <div className="h-1.5 bg-gray-200 rounded-full w-4/5" />
+      <div className="h-1.5 bg-gray-100 rounded-full w-3/5" />
+    </div>
+  )
+  if (type === 'text2') return (
+    <p className="text-[10px] text-[#6B7280] leading-relaxed line-clamp-3">High energy, cinematic, futuristic...</p>
+  )
+  if (type === 'metric') return (
+    <div>
+      <p className="text-[10px] font-medium text-[#374151] mb-1.5">Generate insights</p>
+      <div className="flex gap-1.5">
+        <span className="px-1.5 py-0.5 rounded bg-violet-100 text-violet-700 text-[9px] font-semibold">2</span>
+        <span className="px-1.5 py-0.5 rounded bg-gray-100 text-gray-500 text-[9px]">2</span>
       </div>
     </div>
   )
-}
-
-// ─── Resize handle ────────────────────────────────────────────────────────────
-
-function ResizeHandle({ onResizeStart }: { onResizeStart: (e: React.MouseEvent) => void }) {
-  return (
-    <div
-      className="absolute bottom-0 right-0 w-5 h-5 cursor-se-resize flex items-end justify-end p-1 rounded-br-2xl opacity-30 hover:opacity-100 transition-opacity"
-      onMouseDown={onResizeStart}
-    >
-      <GripVertical size={10} className="text-[#9CA3AF] rotate-45" />
+  if (type === 'images') return (
+    <div className="flex gap-1">
+      <div className="flex-1 h-12 rounded" style={{ background: 'linear-gradient(135deg,#374151,#111827)' }} />
+      <div className="flex-1 h-12 rounded" style={{ background: 'linear-gradient(135deg,#4B5563,#1f2937)' }} />
     </div>
   )
-}
-
-// ─── Canvas node ─────────────────────────────────────────────────────────────
-
-function CanvasNode({ def, pos, selected, onSelect, onDragStart }: {
-  def: NodeDef
-  pos: { x: number; y: number }
-  selected: boolean
-  onSelect: (id: string) => void
-  onDragStart: (id: string, ox: number, oy: number) => void
-}) {
-  return (
-    <div
-      onMouseDown={(e) => {
-        e.preventDefault(); e.stopPropagation()
-        const r = (e.currentTarget as HTMLElement).getBoundingClientRect()
-        onDragStart(def.id, e.clientX - r.left, e.clientY - r.top)
-        onSelect(def.id)
-      }}
-      style={{ left: pos.x, top: pos.y }}
-      className={`absolute w-[148px] bg-white rounded-xl border cursor-grab active:cursor-grabbing shadow-sm select-none transition-shadow
-        ${selected ? 'border-indigo-400 ring-2 ring-indigo-200 shadow-indigo-100 shadow-md' : 'border-[#E8E8EF] hover:shadow-md'}`}
-    >
-      <div className="rounded-t-xl px-2.5 py-1.5 flex items-center justify-between" style={{ backgroundColor: def.bg }}>
-        <div className="flex items-center gap-1.5">
-          <div className="w-2 h-2 rounded-full" style={{ backgroundColor: def.color }} />
-          <span className="text-[10px] font-bold" style={{ color: def.color }}>{def.label}</span>
-        </div>
-        <div className="flex items-center gap-1">
-          <span className="text-[9px] opacity-60 font-medium" style={{ color: def.color }}>{def.tag}</span>
-          {def.badge && <span className="text-[9px] font-bold px-1 rounded text-white" style={{ backgroundColor: def.color }}>{def.badge}</span>}
-        </div>
-      </div>
-      <div className="p-2">
-        {def.desc && <p className="text-[10px] text-[#6B7280] mb-1.5">{def.desc}</p>}
-        {def.hasImages && (
-          <div className="grid grid-cols-3 gap-1">
-            {[0, 1, 2].map((i) => <div key={i} className="h-7 rounded" style={{ background: `linear-gradient(135deg, ${def.bg}, ${def.color}33)` }} />)}
-          </div>
-        )}
-      </div>
+  if (type === 'images2') return (
+    <div className="flex gap-1">
+      <div className="flex-1 h-12 rounded" style={{ background: 'radial-gradient(ellipse at 40% 50%,#334155,#0f172a)' }} />
+      <div className="flex-1 h-12 rounded" style={{ background: 'radial-gradient(ellipse at 60% 50%,#1e3a5f,#0f172a)' }} />
     </div>
   )
-}
-
-function CanvasArrows({ positions }: { positions: Record<string, { x: number; y: number }> }) {
-  const nw = 148, nh = 76
-  const r = (id: string) => ({ x: (positions[id]?.x ?? 0) + nw, y: (positions[id]?.y ?? 0) + nh / 2 })
-  const l = (id: string) => ({ x: positions[id]?.x ?? 0, y: (positions[id]?.y ?? 0) + nh / 2 })
-  const b = (id: string) => ({ x: (positions[id]?.x ?? 0) + nw / 2, y: (positions[id]?.y ?? 0) + nh })
-  const t = (id: string) => ({ x: (positions[id]?.x ?? 0) + nw / 2, y: positions[id]?.y ?? 0 })
-  const arrows = [
-    [r('brief'), l('insight')], [r('insight'), l('concept')],
-    [b('brief'), t('prompt')], [r('prompt'), l('generate')],
-    [r('generate'), l('output')], [b('insight'), t('generate')],
-  ] as Array<[{ x: number; y: number }, { x: number; y: number }]>
-
-  return (
-    <svg className="absolute inset-0 pointer-events-none" style={{ width: '100%', height: '100%', overflow: 'visible' }}>
-      <defs>
-        <marker id="arr" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto">
-          <polygon points="0 0, 8 3, 0 6" fill="#D1D5DB" />
-        </marker>
-      </defs>
-      {arrows.map(([f, t], i) => {
-        const horiz = Math.abs(t.y - f.y) < 20
-        return (
-          <path key={i}
-            d={`M ${f.x} ${f.y} C ${horiz ? f.x + (t.x - f.x) * .5 : f.x} ${horiz ? f.y : f.y + (t.y - f.y) * .5}, ${horiz ? f.x + (t.x - f.x) * .5 : t.x} ${horiz ? t.y : f.y + (t.y - f.y) * .5}, ${t.x} ${t.y}`}
-            fill="none" stroke="#D1D5DB" strokeWidth="1.5" markerEnd="url(#arr)"
-          />
-        )
-      })}
-    </svg>
+  if (type === 'image3') return (
+    <div className="h-14 rounded" style={{ background: 'radial-gradient(ellipse at center,#1e3a5f,#0a0a0a)' }} />
   )
+  return null
 }
 
-// ─── Main ─────────────────────────────────────────────────────────────────────
+// ─── Main component ──────────────────────────────────────────────────────────
 
 export default function Workspace() {
   const { roomId } = useParams({ from: '/live/$roomId' })
   const navigate = useNavigate()
+  const { displayName } = useAppStore()
 
-  // Panel layout state
-  const [panels, setPanels] = useState<PanelBox[]>(DEFAULT_PANELS)
-  const dragRef = useRef<{ id: string; startX: number; startY: number; origX: number; origY: number } | null>(null)
-  const resizeRef = useRef<{ id: string; startX: number; startY: number; origW: number; origH: number } | null>(null)
-  const topZ = useRef(10)
+  const [activeNav, setActiveNav]         = useState<'live' | 'learn' | 'play'>('live')
+  const [activeLayout, setActiveLayout]   = useState('canvas')
+  const [activeLearnTab, setLearnTab]     = useState<'notes' | 'transcript' | 'sources'>('notes')
+  const [activePlayTab, setPlayTab]       = useState<'api' | 'prompts' | 'models' | 'tools'>('api')
+  const [snapOn, setSnapOn]               = useState(true)
+  const [infiniteCanvas, setInfiniteCanvas] = useState(true)
+  const [zoom, setZoom]                   = useState(100)
+  const [chatMsgs, setChatMsgs]           = useState<ChatMsg[]>(INIT_CHAT)
+  const [chatInput, setChatInput]         = useState('')
+  const [chatLoading, setChatLoading]     = useState(false)
+  const [learnMsgs, setLearnMsgs]         = useState<LearnMsg[]>([])
+  const [learnInput, setLearnInput]       = useState('')
+  const [learnLoading, setLearnLoading]   = useState(false)
+  const [apiBody, setApiBody]             = useState('{\n  "prompt": "Futuristic race car, motion blur, cinematic",\n  "style": "cinematic",\n  "ar": "16:9"\n}')
+  const [apiLoading, setApiLoading]       = useState(false)
+  const [apiResponse, setApiResponse]     = useState<string | null>(null)
 
-  const bringToFront = useCallback((id: string) => {
-    topZ.current += 1
-    setPanels((ps) => ps.map((p) => p.id === id ? { ...p, z: topZ.current } : p))
-  }, [])
+  const chatEndRef  = useRef<HTMLDivElement>(null)
+  const learnEndRef = useRef<HTMLDivElement>(null)
 
-  const updatePanel = useCallback((id: string, patch: Partial<PanelBox>) => {
-    setPanels((ps) => ps.map((p) => p.id === id ? { ...p, ...patch } : p))
-  }, [])
-
-  useEffect(() => {
-    const onMove = (e: MouseEvent) => {
-      if (dragRef.current) {
-        const { id, startX, startY, origX, origY } = dragRef.current
-        updatePanel(id, {
-          x: snap(Math.max(0, origX + e.clientX - startX)),
-          y: snap(Math.max(0, origY + e.clientY - startY)),
-        })
-      }
-      if (resizeRef.current) {
-        const { id, startX, startY, origW, origH } = resizeRef.current
-        updatePanel(id, {
-          w: snap(Math.max(MIN_W, origW + e.clientX - startX)),
-          h: snap(Math.max(MIN_H, origH + e.clientY - startY)),
-        })
-      }
-    }
-    const onUp = () => { dragRef.current = null; resizeRef.current = null }
-    window.addEventListener('mousemove', onMove)
-    window.addEventListener('mouseup', onUp)
-    return () => { window.removeEventListener('mousemove', onMove); window.removeEventListener('mouseup', onUp) }
-  }, [updatePanel])
-
-  function startDrag(id: string, e: React.MouseEvent) {
-    e.preventDefault()
-    bringToFront(id)
-    const p = panels.find((x) => x.id === id)!
-    dragRef.current = { id, startX: e.clientX, startY: e.clientY, origX: p.x, origY: p.y }
-  }
-
-  function startResize(id: string, e: React.MouseEvent) {
-    e.preventDefault(); e.stopPropagation()
-    bringToFront(id)
-    const p = panels.find((x) => x.id === id)!
-    resizeRef.current = { id, startX: e.clientX, startY: e.clientY, origW: p.w, origH: p.h }
-  }
-
-  function resetLayout() { setPanels(DEFAULT_PANELS) }
-
-  const pbox = (id: string) => panels.find((p) => p.id === id)!
-
-  // ── Mic/cam
-  const [micOn, setMicOn] = useState(false)
-  const [camOn, setCamOn] = useState(true)
-
-  // ── Chat
-  const [chatInput, setChatInput] = useState('')
-  const [chatMessages, setChatMessages] = useState(MOCK_CHAT)
-  const [chatAiLoading, setChatAiLoading] = useState(false)
+  useEffect(() => { chatEndRef.current?.scrollIntoView({ behavior: 'smooth' }) },  [chatMsgs])
+  useEffect(() => { learnEndRef.current?.scrollIntoView({ behavior: 'smooth' }) }, [learnMsgs])
 
   async function sendChat(e: React.FormEvent) {
     e.preventDefault()
-    if (!chatInput.trim()) return
-    const msg = chatInput.trim()
-    setChatInput('')
-    const time = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
-    setChatMessages((p) => [...p, { id: String(Date.now()), user: 'You', initials: 'YO', color: '#6366F1', time, text: msg }])
-    const isQ = msg.endsWith('?') || /^(what|how|why|can|is|does|should)/i.test(msg)
-    if (isQ) {
-      setChatAiLoading(true)
-      try {
-        const answer = await askGemini(msg, `Live webinar session ${roomId}. Reply briefly as an AI assistant.`)
-        const t2 = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
-        setChatMessages((p) => [...p, { id: String(Date.now()), user: 'AI Assistant', initials: 'AI', color: '#6366F1', time: t2, text: answer }])
-      } finally { setChatAiLoading(false) }
-    }
+    if (!chatInput.trim() || chatLoading) return
+    const text = chatInput.trim(); setChatInput('')
+    const now = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+    setChatMsgs((m) => [...m, { id: Date.now().toString(), user: displayName || 'You', avatar: (displayName || 'Y')[0].toUpperCase(), time: now, content: text }])
+    setChatLoading(true)
+    try {
+      const reply = await askGemini(text, 'You are a helpful assistant in a live webinar. Be concise.')
+      setChatMsgs((m) => [...m, { id: (Date.now()+1).toString(), user: 'AI', avatar: 'AI', time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }), content: reply }])
+    } finally { setChatLoading(false) }
   }
-
-  // ── Learn
-  const [learnTab, setLearnTab] = useState<'chat' | 'transcript'>('chat')
-  const [learnQuery, setLearnQuery] = useState('')
-  const [learnLoading, setLearnLoading] = useState(false)
-  const [learnMsgs, setLearnMsgs] = useState<Array<{ id: string; role: 'user' | 'ai'; text: string }>>([])
-  const learnEndRef = useRef<HTMLDivElement>(null)
-  useEffect(() => { learnEndRef.current?.scrollIntoView({ behavior: 'smooth' }) }, [learnMsgs])
 
   async function askLearn(e: React.FormEvent) {
     e.preventDefault()
-    if (!learnQuery.trim() || learnLoading) return
-    const q = learnQuery.trim(); setLearnQuery('')
-    setLearnMsgs((p) => [...p, { id: String(Date.now()), role: 'user', text: q }])
+    if (!learnInput.trim() || learnLoading) return
+    const q = learnInput.trim(); setLearnInput('')
+    setLearnMsgs((m) => [...m, { id: Date.now().toString(), role: 'user', content: q }])
     setLearnLoading(true)
     try {
-      const ans = await askGemini(q, `Live webinar room: ${roomId}. Help the attendee understand the session.`)
-      setLearnMsgs((p) => [...p, { id: String(Date.now() + 1), role: 'ai', text: ans }])
-    } catch {
-      setLearnMsgs((p) => [...p, { id: String(Date.now() + 1), role: 'ai', text: 'Unable to reach AI.' }])
+      const ans = await askGemini(q, 'You are an expert AI learning assistant. Give concise, insightful answers.')
+      setLearnMsgs((m) => [...m, { id: (Date.now()+1).toString(), role: 'assistant', content: ans }])
     } finally { setLearnLoading(false) }
   }
 
-  // ── Play
-  const [playPrompt, setPlayPrompt] = useState('Futuristic race car, motion blur, cinematic, 16:9')
-  const [playLoading, setPlayLoading] = useState(false)
-  const [playOutput, setPlayOutput] = useState('')
-
-  async function runPlay() {
-    if (!playPrompt.trim() || playLoading) return
-    setPlayLoading(true); setPlayOutput('')
+  async function sendPlayground() {
+    if (apiLoading) return
+    setApiLoading(true); setApiResponse(null)
     try {
-      const r = await askGemini(
-        `Act as an AI image API. For this prompt: "${playPrompt}" — describe what the generated image looks like (style, composition, lighting, mood) in 3-4 sentences. Then give 3 improved prompt variations.`,
-        'AI image generation playground'
-      )
-      setPlayOutput(r)
-    } catch { setPlayOutput('API error — check your Gemini key.') }
-    finally { setPlayLoading(false) }
+      let prompt = 'Generate creative content'
+      try { const p = JSON.parse(apiBody); if (p.prompt) prompt = p.prompt } catch {}
+      const resp = await askGemini(prompt, 'You are a creative AI model. Generate vivid, descriptive creative content based on the prompt.')
+      setApiResponse(resp)
+    } finally { setApiLoading(false) }
   }
 
-  // ── Canvas
-  const [nodePositions, setNodePositions] = useState(NODE_INIT)
-  const [selectedNode, setSelectedNode] = useState<string | null>(null)
-  const [showGrid, setShowGrid] = useState(true)
-  const [showRulers, setShowRulers] = useState(false)
-  const [snapNodes, setSnapNodes] = useState(true)
-  const [zoomLevel, setZoomLevel] = useState(1)
-  const [activeTool, setActiveTool] = useState('cursor')
-  const nodeDragRef = useRef<{ id: string; ox: number; oy: number } | null>(null)
-  const canvasRef = useRef<HTMLDivElement>(null)
+  const nodeMap = Object.fromEntries(NODES.map((n) => [n.id, n]))
 
-  useEffect(() => {
-    const onMove = (e: MouseEvent) => {
-      if (!nodeDragRef.current || !canvasRef.current) return
-      const { id, ox, oy } = nodeDragRef.current
-      const rect = canvasRef.current.getBoundingClientRect()
-      let x = (e.clientX - rect.left) / zoomLevel - ox
-      let y = (e.clientY - rect.top) / zoomLevel - oy
-      if (snapNodes) { x = Math.round(x / 20) * 20; y = Math.round(y / 20) * 20 }
-      setNodePositions((p) => ({ ...p, [id]: { x: Math.max(0, x), y: Math.max(0, y) } }))
-    }
-    const onUp = () => { nodeDragRef.current = null }
-    window.addEventListener('mousemove', onMove)
-    window.addEventListener('mouseup', onUp)
-    return () => { window.removeEventListener('mousemove', onMove); window.removeEventListener('mouseup', onUp) }
-  }, [zoomLevel, snapNodes])
+  return (
+    <div className="fixed inset-0 z-50 flex flex-col bg-white text-[#111827] overflow-hidden select-none">
 
-  // ── Render panel content
-  function renderContent(id: string, box: PanelBox) {
-    if (box.minimized) return null
-
-    if (id === 'live') return (
-      <div className="flex-1 bg-[#0F172A] relative overflow-hidden min-h-0 rounded-b-none">
-        <div className="absolute inset-0" style={{ background: 'linear-gradient(135deg, #1e1b4b 0%, #0f172a 60%, #020617 100%)' }} />
-        <div className="absolute inset-0 opacity-[0.07]" style={{ backgroundImage: 'repeating-linear-gradient(0deg,#6366f1 0,#6366f1 1px,transparent 0,transparent 40px),repeating-linear-gradient(90deg,#6366f1 0,#6366f1 1px,transparent 0,transparent 40px)' }} />
-        <div className="absolute top-3 left-3 flex items-center gap-1.5 px-2 py-1 rounded-md bg-red-500/80 backdrop-blur-sm">
-          <span className="relative flex h-1.5 w-1.5">
-            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-white opacity-75" />
-            <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-white" />
-          </span>
-          <span className="text-[9px] font-bold text-white tracking-wide">LIVE</span>
-        </div>
-        <div className="absolute top-3 right-3 flex items-center gap-1 px-2 py-1 rounded-md bg-black/40 backdrop-blur-sm">
-          <Users size={9} className="text-white/70" />
-          <span className="text-[9px] text-white/70 font-medium">128</span>
-        </div>
-        <div className="absolute inset-0 flex items-center justify-center">
-          <div className="w-16 h-16 rounded-full bg-indigo-600/30 border border-indigo-400/30 flex items-center justify-center">
-            <span className="text-2xl font-bold text-indigo-300/60">P</span>
+      {/* ── Top nav ──────────────────────────────────────────────────────── */}
+      <div className="h-12 flex items-center px-4 border-b border-[#E8E8EF] shrink-0 gap-3 bg-white">
+        <div className="flex items-center gap-2 mr-1">
+          <div className="w-7 h-7 rounded-lg bg-[#111827] flex items-center justify-center">
+            <Zap size={13} className="text-white" />
           </div>
+          <span className="text-sm font-bold">Sandbox</span>
         </div>
-        <div className="absolute bottom-0 left-0 right-0 flex items-center justify-center gap-2 px-3 py-2.5 bg-[#0F172A]/80 backdrop-blur-sm">
-          {[
-            { icon: micOn ? <Mic size={12} /> : <MicOff size={12} />, active: micOn, fn: () => setMicOn(!micOn) },
-            { icon: camOn ? <Video size={12} /> : <VideoOff size={12} />, active: camOn, fn: () => setCamOn(!camOn) },
-            { icon: <ScreenShare size={12} />, active: false, fn: () => {} },
-            { icon: <MoreHorizontal size={12} />, active: false, fn: () => {} },
-          ].map((b, i) => (
-            <button key={i} onClick={b.fn} className={`w-7 h-7 flex items-center justify-center rounded-lg transition-colors ${b.active ? 'bg-white/20 text-white' : 'bg-white/5 text-white/50 hover:bg-white/10 hover:text-white'}`}>
-              {b.icon}
+
+        <nav className="flex items-end h-full">
+          {(['live','learn','play'] as const).map((tab) => (
+            <button key={tab} onClick={() => setActiveNav(tab)}
+              className={`flex items-center gap-1.5 px-3.5 h-full text-sm font-medium transition-colors relative ${activeNav===tab ? 'text-[#111827]' : 'text-[#9CA3AF] hover:text-[#6B7280]'}`}
+            >
+              {tab==='live' && <span className="relative flex h-1.5 w-1.5"><span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-rose-400 opacity-75"/><span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-rose-500"/></span>}
+              {tab.charAt(0).toUpperCase()+tab.slice(1)}
+              {activeNav===tab && <span className="absolute bottom-0 left-0 right-0 h-[2px] bg-indigo-600 rounded-t-full"/>}
             </button>
           ))}
+        </nav>
+
+        <div className="flex-1"/>
+
+        <button className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-[#E8E8EF] hover:bg-[#F7F7FA] text-sm font-medium text-[#374151] transition-colors">
+          <GitBranch size={13} className="text-indigo-500"/> Priority Mix <ChevronDown size={11} className="text-[#9CA3AF]"/>
+        </button>
+        <div className="w-px h-5 bg-[#E8E8EF]"/>
+        <button className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg hover:bg-[#F7F7FA] text-sm font-medium text-[#374151] transition-colors">
+          <Share2 size={13}/> Share
+        </button>
+        <button className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg hover:bg-[#F7F7FA] text-sm font-medium text-[#374151] transition-colors">
+          <Save size={13}/> Save layout
+        </button>
+        <button className="p-2 rounded-lg hover:bg-[#F7F7FA] text-[#6B7280] transition-colors"><Grid3X3 size={14}/></button>
+        <button className="p-2 rounded-lg hover:bg-[#F7F7FA] text-[#6B7280] transition-colors"><Bell size={14}/></button>
+        <div className="w-7 h-7 rounded-full bg-indigo-600 flex items-center justify-center text-white text-xs font-bold cursor-pointer">
+          {(displayName||'U')[0].toUpperCase()}
+        </div>
+        <button onClick={() => navigate({ to: '/live' })} className="p-1.5 rounded-lg hover:bg-red-50 text-[#9CA3AF] hover:text-red-400 transition-colors ml-1">
+          <X size={14}/>
+        </button>
+      </div>
+
+      {/* ── Priority Mix bar ─────────────────────────────────────────────── */}
+      <div className="h-[50px] border-b border-[#E8E8EF] flex items-center px-6 gap-3 shrink-0 bg-[#FAFAFA]">
+        <div className="text-center w-12">
+          <p className="text-[11px] font-semibold text-indigo-600 leading-tight">Live</p>
+          <p className="text-[10px] text-[#9CA3AF]">60%</p>
+        </div>
+        <div className="flex-1 relative h-1.5">
+          <div className="absolute inset-0 rounded-full bg-gradient-to-r from-indigo-500 via-blue-400 to-emerald-400"/>
+          <div className="absolute -top-[5px] left-[60%] -translate-x-1/2 w-3.5 h-3.5 rounded-full bg-indigo-600 border-2 border-white shadow cursor-pointer"/>
+          <div className="absolute -top-6 left-[60%] -translate-x-1/2 text-center">
+            <p className="text-[11px] font-semibold text-[#374151] leading-tight">Learn</p>
+            <p className="text-[10px] text-[#9CA3AF]">20%</p>
+          </div>
+          <div className="absolute -top-[5px] left-[80%] -translate-x-1/2 w-3.5 h-3.5 rounded-full bg-emerald-500 border-2 border-white shadow cursor-pointer"/>
+        </div>
+        <div className="text-center w-12">
+          <p className="text-[11px] font-semibold text-emerald-600 leading-tight">Play</p>
+          <p className="text-[10px] text-[#9CA3AF]">20%</p>
         </div>
       </div>
-    )
 
-    if (id === 'chat') return (
-      <div className="flex-1 flex flex-col min-h-0 overflow-hidden">
-        <div className="flex-1 overflow-y-auto px-3 py-2 space-y-2 min-h-0">
-          {chatMessages.map((m) => (
-            <div key={m.id} className="flex gap-2">
-              <div className="w-5 h-5 rounded-full flex items-center justify-center text-[8px] font-bold text-white flex-shrink-0 mt-0.5" style={{ backgroundColor: m.color }}>{m.initials}</div>
-              <div className="flex-1 min-w-0">
-                <div className="flex items-baseline gap-1.5">
-                  <span className="text-[10px] font-semibold text-[#111827]">{m.user}</span>
-                  <span className="text-[9px] text-[#9CA3AF]">{m.time}</span>
-                </div>
-                <p className="text-[10px] text-[#374151] leading-relaxed">{m.text}</p>
+      {/* ── Layout presets ───────────────────────────────────────────────── */}
+      <div className="h-11 border-b border-[#E8E8EF] flex items-center px-4 gap-1.5 overflow-x-auto shrink-0 bg-white">
+        {LAYOUTS.map((l) => (
+          <button key={l.id} onClick={() => setActiveLayout(l.id)}
+            className={`flex-shrink-0 px-3.5 py-1.5 rounded-lg text-xs font-medium transition-all ${activeLayout===l.id ? 'bg-indigo-600 text-white' : 'text-[#6B7280] hover:bg-[#F7F7FA] hover:text-[#374151]'}`}
+          >{l.label}</button>
+        ))}
+        <button className="flex-shrink-0 p-1.5 rounded-lg text-[#9CA3AF] hover:bg-[#F7F7FA] transition-colors ml-1"><MoreHorizontal size={14}/></button>
+      </div>
+
+      {/* ── Main ─────────────────────────────────────────────────────────── */}
+      <div className="flex flex-1 min-h-0">
+
+        {/* Sidebar */}
+        <div className="w-14 bg-white border-r border-[#E8E8EF] flex flex-col items-center py-3 gap-1 shrink-0">
+          {[{icon:Layers,label:'Layout'},{icon:Ruler,label:'Rulers'},{icon:Grid3X3,label:'Grid'}].map(({icon:Icon,label}) => (
+            <button key={label} className="w-10 h-10 flex flex-col items-center justify-center gap-0.5 rounded-lg hover:bg-[#F7F7FA] text-[#6B7280] hover:text-[#374151] transition-colors">
+              <Icon size={15}/><span className="text-[8px] text-[#9CA3AF]">{label}</span>
+            </button>
+          ))}
+          <button onClick={() => setSnapOn(!snapOn)} className="w-10 flex flex-col items-center justify-center gap-0.5 py-1.5 rounded-lg hover:bg-[#F7F7FA] transition-colors">
+            <Magnet size={15} className={snapOn ? 'text-indigo-600' : 'text-[#6B7280]'}/>
+            <div className={`w-7 h-3.5 rounded-full flex items-center px-0.5 transition-colors ${snapOn ? 'bg-indigo-500' : 'bg-[#D1D5DB]'}`}>
+              <div className={`w-2.5 h-2.5 bg-white rounded-full shadow transition-transform ${snapOn ? 'translate-x-3.5' : ''}`}/>
+            </div>
+          </button>
+          <div className="w-6 h-px bg-[#E8E8EF] my-1"/>
+          {[{icon:Crosshair,label:'Focus'},{icon:ExternalLink,label:'Pop out'},{icon:Lock,label:'Lock'}].map(({icon:Icon,label}) => (
+            <button key={label} className="w-10 h-10 flex flex-col items-center justify-center gap-0.5 rounded-lg hover:bg-[#F7F7FA] text-[#6B7280] hover:text-[#374151] transition-colors">
+              <Icon size={15}/><span className="text-[8px] text-[#9CA3AF]">{label}</span>
+            </button>
+          ))}
+          <div className="w-6 h-px bg-[#E8E8EF] my-1"/>
+          <button className="w-10 h-10 flex flex-col items-center justify-center gap-0.5 rounded-lg hover:bg-[#F7F7FA] text-[#6B7280] hover:text-[#374151] transition-colors">
+            <Settings size={15}/><span className="text-[8px] text-[#9CA3AF]">Settings</span>
+          </button>
+          <div className="flex-1"/>
+          <div className="w-7 h-7 rounded-lg bg-[#111827] flex items-center justify-center"><Zap size={11} className="text-white"/></div>
+        </div>
+
+        {/* Left col: Video + Chat */}
+        <div className="w-[370px] flex flex-col border-r border-[#E8E8EF] shrink-0 min-h-0">
+          {/* Video */}
+          <div className="h-[205px] bg-[#0f0f13] relative shrink-0 overflow-hidden">
+            <div className="absolute inset-0 flex items-center justify-center">
+              <div className="w-20 h-20 rounded-full bg-[#1f1f2e] flex items-center justify-center">
+                <span className="text-2xl font-bold text-white">{(displayName||'Y')[0].toUpperCase()}</span>
               </div>
             </div>
-          ))}
-          {chatAiLoading && (
-            <div className="flex items-center gap-2 px-2 py-1.5 rounded-lg bg-indigo-50">
-              <Brain size={10} className="text-indigo-400 animate-pulse" />
-              <span className="text-[10px] text-indigo-500">AI responding…</span>
+            <div className="absolute top-3 left-3 flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-rose-500 text-white text-[10px] font-bold">
+              <span className="w-1.5 h-1.5 rounded-full bg-white animate-pulse"/> LIVE
             </div>
-          )}
-        </div>
-        <form onSubmit={sendChat} className="flex gap-2 px-3 py-2.5 border-t border-[#F0F0F5] flex-shrink-0">
-          <input value={chatInput} onChange={(e) => setChatInput(e.target.value)}
-            placeholder="Message… (? for AI reply)"
-            className="flex-1 text-[11px] bg-[#F7F7FA] border border-[#E8E8EF] rounded-lg px-2.5 py-1.5 text-[#111827] placeholder-[#9CA3AF] focus:outline-none focus:border-indigo-300 min-w-0"
-          />
-          <button type="submit" className="w-7 h-7 rounded-lg bg-indigo-600 text-white flex items-center justify-center hover:bg-indigo-500 flex-shrink-0"><Send size={11} /></button>
-        </form>
-      </div>
-    )
+            <div className="absolute bottom-3 left-3 text-[10px] text-white/50 font-mono truncate max-w-[80%]">{roomId}</div>
+          </div>
 
-    if (id === 'canvas') return (
-      <div className="flex-1 flex flex-col min-h-0 overflow-hidden">
-        {/* Canvas toolbar */}
-        <div className="flex items-center gap-1 px-3 py-1.5 border-b border-[#F0F0F5] bg-white flex-shrink-0">
-          {[
-            { id: 'cursor', icon: <MousePointer2 size={12} />, title: 'Select' },
-            { id: 'move',   icon: <Move size={12} />,          title: 'Pan'    },
-            { id: 'text',   icon: <Type size={12} />,          title: 'Text'   },
-            { id: 'frame',  icon: <Frame size={12} />,         title: 'Frame'  },
-          ].map((t) => (
-            <button key={t.id} title={t.title} onClick={() => setActiveTool(t.id)}
-              className={`w-6 h-6 flex items-center justify-center rounded transition-colors ${activeTool === t.id ? 'bg-indigo-50 text-indigo-600' : 'text-[#9CA3AF] hover:bg-gray-100'}`}>
-              {t.icon}
-            </button>
-          ))}
-          <div className="w-px h-4 bg-[#F0F0F5] mx-1" />
-          <button title="Grid" onClick={() => setShowGrid(!showGrid)} className={`w-6 h-6 flex items-center justify-center rounded transition-colors ${showGrid ? 'bg-indigo-50 text-indigo-600' : 'text-[#9CA3AF] hover:bg-gray-100'}`}><Grid3x3 size={12} /></button>
-          <button title="Rulers" onClick={() => setShowRulers(!showRulers)} className={`w-6 h-6 flex items-center justify-center rounded transition-colors ${showRulers ? 'bg-indigo-50 text-indigo-600' : 'text-[#9CA3AF] hover:bg-gray-100'}`}><Ruler size={12} /></button>
-          <button title="Snap" onClick={() => setSnapNodes(!snapNodes)} className={`w-6 h-6 flex items-center justify-center rounded transition-colors ${snapNodes ? 'bg-indigo-50 text-indigo-600' : 'text-[#9CA3AF] hover:bg-gray-100'}`}><Magnet size={12} /></button>
-          <div className="flex-1" />
-          <span className="text-[10px] font-mono text-[#9CA3AF]">{Math.round(zoomLevel * 100)}%</span>
-          <button onClick={() => setZoomLevel((z) => Math.min(3, z + 0.1))} className="w-5 h-5 flex items-center justify-center rounded text-[#9CA3AF] hover:bg-gray-100"><ZoomIn size={11} /></button>
-          <button onClick={() => setZoomLevel((z) => Math.max(0.25, z - 0.1))} className="w-5 h-5 flex items-center justify-center rounded text-[#9CA3AF] hover:bg-gray-100"><ZoomOut size={11} /></button>
-        </div>
-        {/* Canvas area */}
-        <div className="flex-1 relative overflow-auto min-h-0 canvas-grid">
-          <div ref={canvasRef} className="relative" style={{ width: 760, height: 480, transform: `scale(${zoomLevel})`, transformOrigin: 'top left',
-            backgroundImage: showGrid ? 'radial-gradient(circle, #CBD5E1 1px, transparent 1px)' : 'none', backgroundSize: '20px 20px' }}>
-            <CanvasArrows positions={nodePositions} />
-            {NODE_DEFS.map((def) => (
-              <CanvasNode key={def.id} def={def} pos={nodePositions[def.id] ?? { x: 0, y: 0 }}
-                selected={selectedNode === def.id} onSelect={setSelectedNode}
-                onDragStart={(id, ox, oy) => { nodeDragRef.current = { id, ox, oy } }}
+          {/* Chat */}
+          <div className="flex flex-col flex-1 min-h-0">
+            <div className="px-4 py-2.5 border-b border-[#E8E8EF] flex items-center gap-2 shrink-0">
+              <span className="text-sm font-semibold text-[#111827]">Live Chat</span>
+              <span className="w-1.5 h-1.5 rounded-full bg-rose-400 animate-pulse"/>
+              <div className="flex-1"/>
+              <span className="flex items-center gap-1 text-xs text-[#9CA3AF]"><Users size={11}/> 128</span>
+              <button className="p-1 rounded hover:bg-[#F7F7FA] text-[#9CA3AF]"><MoreHorizontal size={13}/></button>
+            </div>
+
+            <div className="flex-1 overflow-y-auto px-4 py-3 space-y-3 min-h-0">
+              {chatMsgs.map((msg) => (
+                <div key={msg.id} className="flex items-start gap-2">
+                  {msg.avatar==='AI' ? (
+                    <div className="w-6 h-6 rounded-full bg-indigo-100 flex items-center justify-center shrink-0"><Brain size={11} className="text-indigo-600"/></div>
+                  ) : (
+                    <div className={`w-6 h-6 rounded-full flex items-center justify-center shrink-0 text-[10px] font-bold text-white ${AVATAR_COLORS[msg.avatar]||'bg-gray-400'}`}>{msg.avatar}</div>
+                  )}
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-baseline gap-1.5">
+                      <span className="text-xs font-semibold text-[#374151]">{msg.user}</span>
+                      <span className="text-[10px] text-[#9CA3AF]">{msg.time}</span>
+                    </div>
+                    <p className="text-xs text-[#6B7280] leading-relaxed mt-0.5">{msg.content}</p>
+                  </div>
+                </div>
+              ))}
+              {chatLoading && (
+                <div className="flex items-center gap-2">
+                  <div className="w-6 h-6 rounded-full bg-indigo-100 flex items-center justify-center"><Brain size={11} className="text-indigo-600"/></div>
+                  <div className="flex gap-1">{[0,150,300].map((d) => <span key={d} className="w-1 h-1 bg-indigo-400 rounded-full animate-bounce" style={{animationDelay:`${d}ms`}}/>)}</div>
+                </div>
+              )}
+              <div ref={chatEndRef}/>
+            </div>
+
+            <form onSubmit={sendChat} className="px-3 py-2.5 border-t border-[#E8E8EF] flex items-center gap-2 shrink-0">
+              <input value={chatInput} onChange={(e) => setChatInput(e.target.value)} placeholder="Say something..."
+                className="flex-1 px-3 py-1.5 rounded-lg bg-[#F7F7FA] border border-[#E8E8EF] text-xs text-[#111827] placeholder-[#9CA3AF] focus:outline-none focus:border-indigo-300"
               />
+              <button type="submit" disabled={!chatInput.trim()||chatLoading} className="p-1.5 rounded-lg hover:bg-indigo-50 text-[#9CA3AF] hover:text-indigo-600 disabled:opacity-40 transition-colors">
+                <Send size={13}/>
+              </button>
+            </form>
+          </div>
+        </div>
+
+        {/* Center canvas */}
+        <div className="flex-1 flex flex-col min-w-0 min-h-0 bg-white">
+          {/* Canvas toolbar */}
+          <div className="h-10 border-b border-[#E8E8EF] flex items-center px-3 gap-0.5 shrink-0">
+            {[{icon:Play,tip:'Run'},{icon:MousePointer2,tip:'Select'},{icon:Type,tip:'Text'},{icon:Square,tip:'Shape'},{icon:Maximize2,tip:'Expand'},{icon:Grid3X3,tip:'Grid'}].map(({icon:Icon,tip}) => (
+              <button key={tip} title={tip} className="w-7 h-7 flex items-center justify-center rounded hover:bg-[#F7F7FA] text-[#6B7280] hover:text-[#374151] transition-colors">
+                <Icon size={13}/>
+              </button>
+            ))}
+            <div className="w-px h-4 bg-[#E8E8EF] mx-1"/>
+            <button className="w-7 h-7 flex items-center justify-center rounded hover:bg-[#F7F7FA] text-[#9CA3AF] transition-colors"><MoreHorizontal size={13}/></button>
+          </div>
+
+          {/* Ruler + canvas */}
+          <div className="flex flex-1 min-h-0 min-w-0 overflow-hidden">
+            {/* Vertical ruler */}
+            <div className="w-5 bg-white border-r border-[#E8E8EF] shrink-0 relative overflow-hidden">
+              {[100,200,300,400].map((n) => (
+                <div key={n} className="absolute left-0 right-0 flex items-center justify-center" style={{top:n/2-6}}>
+                  <span className="text-[8px] text-[#CACAD4] font-mono">{n}</span>
+                </div>
+              ))}
+            </div>
+
+            <div className="flex flex-col flex-1 min-w-0 min-h-0 overflow-hidden">
+              {/* Horizontal ruler */}
+              <div className="h-5 bg-white border-b border-[#E8E8EF] shrink-0 overflow-hidden relative">
+                {[0,100,200,300,400,500,600,700,800,900,1000,1100,1200].map((n) => (
+                  <div key={n} className="absolute top-0 bottom-0 flex items-center" style={{left:n/2+4}}>
+                    <span className="text-[8px] text-[#CACAD4] font-mono">{n}</span>
+                  </div>
+                ))}
+              </div>
+
+              {/* Canvas */}
+              <div className="flex-1 overflow-auto canvas-grid relative">
+                <div className="relative" style={{width:800,height:480}}>
+                  <svg className="absolute inset-0 pointer-events-none" width={800} height={480}>
+                    {EDGES.map((edge) => {
+                      const from = nodeMap[edge.from], to = nodeMap[edge.to]
+                      if (!from||!to) return null
+                      return <path key={`${edge.from}-${edge.to}`} d={getEdgePath(from,to)} fill="none" stroke="#D1D5DB" strokeWidth={1.5}/>
+                    })}
+                  </svg>
+
+                  {NODES.map((node) => {
+                    const s = NODE_STYLES[node.color]
+                    const Icon = node.icon
+                    return (
+                      <div key={node.id} className={`absolute rounded-xl border shadow-sm cursor-grab hover:shadow-md transition-shadow overflow-visible ${s.bg} ${s.border}`}
+                        style={{left:node.x,top:node.y,width:node.w,height:node.h}}
+                      >
+                        <div className="px-3 pt-2.5 pb-1 flex items-center justify-between">
+                          <div className="flex items-center gap-1.5">
+                            <div className={`w-5 h-5 rounded flex items-center justify-center ${s.iconBg}`}><Icon size={11} className={s.iconColor}/></div>
+                            <span className="text-xs font-semibold text-[#111827]">{node.title}</span>
+                          </div>
+                          {node.badge && <span className={`px-1.5 py-0.5 rounded text-[9px] font-bold ${node.color==='emerald'?'bg-emerald-500':'bg-indigo-500'} text-white`}>{node.badge}</span>}
+                        </div>
+                        <div className="px-3 pb-1.5">
+                          <span className={`text-[9px] font-medium px-1.5 py-0.5 rounded ${s.tagBg} ${s.tagText}`}>{node.tag}</span>
+                        </div>
+                        <div className="px-3 pb-2.5"><NodePreview type={node.preview}/></div>
+                        <div className={`absolute top-1/2 -left-[5px] -translate-y-1/2 w-2.5 h-2.5 rounded-full border-2 border-white shadow ${s.dot}`}/>
+                        <div className={`absolute top-1/2 -right-[5px] -translate-y-1/2 w-2.5 h-2.5 rounded-full border-2 border-white shadow ${s.dot}`}/>
+                        <div className={`absolute -top-[5px] left-1/2 -translate-x-1/2 w-2.5 h-2.5 rounded-full border-2 border-white shadow ${s.dot}`}/>
+                        <div className={`absolute -bottom-[5px] left-1/2 -translate-x-1/2 w-2.5 h-2.5 rounded-full border-2 border-white shadow ${s.dot}`}/>
+                      </div>
+                    )
+                  })}
+
+                  <button className="absolute w-8 h-8 rounded-full bg-white border-2 border-dashed border-[#D1D5DB] flex items-center justify-center text-[#9CA3AF] hover:border-indigo-400 hover:text-indigo-500 transition-colors" style={{left:360,top:440}}>
+                    <Plus size={14}/>
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Zoom controls */}
+          <div className="h-9 border-t border-[#E8E8EF] flex items-center justify-end px-4 gap-1.5 shrink-0">
+            <button onClick={() => setZoom((z) => Math.max(25,z-25))} className="w-6 h-6 flex items-center justify-center rounded hover:bg-[#F7F7FA] text-[#6B7280]"><Minus size={12}/></button>
+            <span className="text-xs text-[#374151] font-medium w-10 text-center">{zoom}%</span>
+            <button onClick={() => setZoom((z) => Math.min(200,z+25))} className="w-6 h-6 flex items-center justify-center rounded hover:bg-[#F7F7FA] text-[#6B7280]"><Plus size={12}/></button>
+            <div className="w-px h-4 bg-[#E8E8EF] mx-1"/>
+            <button className="w-6 h-6 flex items-center justify-center rounded hover:bg-[#F7F7FA] text-[#6B7280]"><Maximize2 size={12}/></button>
+          </div>
+        </div>
+
+        {/* Right col: Learn + Playground */}
+        <div className="w-[320px] border-l border-[#E8E8EF] flex flex-col shrink-0 min-h-0">
+
+          {/* Learn */}
+          <div className="flex flex-col border-b border-[#E8E8EF] min-h-0" style={{maxHeight:'55%'}}>
+            <div className="px-4 py-2.5 flex items-center gap-2 border-b border-[#E8E8EF] shrink-0">
+              <span className="text-sm font-bold text-[#111827] flex-1">Learn</span>
+              <button onClick={() => setLearnInput('Give me the key insight from this session')}
+                className="flex items-center gap-1 px-2 py-1 rounded-lg bg-indigo-50 hover:bg-indigo-100 text-indigo-600 text-xs font-medium transition-colors">
+                <Sparkles size={10}/> Ask AI
+              </button>
+              <button className="p-1 rounded hover:bg-[#F7F7FA] text-[#9CA3AF]"><MoreHorizontal size={13}/></button>
+            </div>
+
+            <div className="flex border-b border-[#E8E8EF] px-4 shrink-0">
+              {(['notes','transcript','sources'] as const).map((tab) => (
+                <button key={tab} onClick={() => setLearnTab(tab)}
+                  className={`px-3 py-2 text-xs font-medium transition-colors relative ${activeLearnTab===tab?'text-indigo-600':'text-[#9CA3AF] hover:text-[#6B7280]'}`}
+                >
+                  {tab==='notes'?'AI Notes':tab.charAt(0).toUpperCase()+tab.slice(1)}
+                  {activeLearnTab===tab && <span className="absolute bottom-0 left-0 right-0 h-[2px] bg-indigo-600"/>}
+                </button>
+              ))}
+            </div>
+
+            <div className="overflow-y-auto flex-1 min-h-0 p-4 space-y-4">
+              {activeLearnTab==='notes' && learnMsgs.length===0 && (
+                <>
+                  <div>
+                    <p className="text-xs font-semibold text-[#374151] mb-2">Key takeaways</p>
+                    <ul className="space-y-1.5">
+                      {['Strong briefs lead to better AI output.','Use references to guide style and tone.','Iterate with small changes, not big jumps.','Test across models for different results.','Keep human judgment in the loop.'].map((t) => (
+                        <li key={t} className="flex items-start gap-2 text-xs text-[#6B7280]">
+                          <span className="w-1 h-1 rounded-full bg-indigo-400 mt-1.5 shrink-0"/>{t}
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                  <div>
+                    <p className="text-xs font-semibold text-[#374151] mb-1.5">Summary</p>
+                    <p className="text-xs text-[#6B7280] leading-relaxed">Today we explored a full creative workflow using AI.</p>
+                  </div>
+                </>
+              )}
+              {learnMsgs.map((m) => (
+                <div key={m.id} className={`flex ${m.role==='user'?'justify-end':'justify-start'}`}>
+                  <div className={`max-w-[85%] px-3 py-2 rounded-xl text-xs leading-relaxed ${m.role==='user'?'bg-indigo-600 text-white':'bg-[#F7F7FA] border border-[#E8E8EF] text-[#374151]'}`}>{m.content}</div>
+                </div>
+              ))}
+              {learnLoading && <div className="flex gap-1 p-1">{[0,150,300].map((d) => <span key={d} className="w-1 h-1 bg-indigo-400 rounded-full animate-bounce" style={{animationDelay:`${d}ms`}}/>)}</div>}
+              <div ref={learnEndRef}/>
+            </div>
+
+            <form onSubmit={askLearn} className="px-3 py-2 border-t border-[#E8E8EF] flex gap-2 shrink-0">
+              <input value={learnInput} onChange={(e) => setLearnInput(e.target.value)} placeholder="Ask about this session..."
+                className="flex-1 px-3 py-1.5 text-xs rounded-lg bg-[#F7F7FA] border border-[#E8E8EF] text-[#111827] placeholder-[#9CA3AF] focus:outline-none focus:border-indigo-300"
+              />
+              <button type="submit" disabled={!learnInput.trim()||learnLoading} className="p-1.5 rounded-lg hover:bg-indigo-50 text-[#9CA3AF] hover:text-indigo-600 disabled:opacity-40 transition-colors">
+                <Send size={13}/>
+              </button>
+            </form>
+          </div>
+
+          {/* Playground */}
+          <div className="flex flex-col flex-1 min-h-0">
+            <div className="px-4 py-2.5 flex items-center gap-2 border-b border-[#E8E8EF] shrink-0">
+              <span className="text-sm font-bold text-[#111827] flex-1">Playground</span>
+              <button className="p-1 rounded hover:bg-[#F7F7FA] text-[#9CA3AF]"><Maximize2 size={13}/></button>
+              <button className="p-1 rounded hover:bg-[#F7F7FA] text-[#9CA3AF]"><MoreHorizontal size={13}/></button>
+            </div>
+
+            <div className="flex border-b border-[#E8E8EF] px-4 shrink-0">
+              {(['api','prompts','models','tools'] as const).map((tab) => (
+                <button key={tab} onClick={() => setPlayTab(tab)}
+                  className={`px-3 py-2 text-xs font-medium uppercase transition-colors relative ${activePlayTab===tab?'text-indigo-600':'text-[#9CA3AF] hover:text-[#6B7280]'}`}
+                >
+                  {tab}
+                  {activePlayTab===tab && <span className="absolute bottom-0 left-0 right-0 h-[2px] bg-indigo-600"/>}
+                </button>
+              ))}
+            </div>
+
+            <div className="flex-1 overflow-y-auto min-h-0 p-3 space-y-3">
+              {activePlayTab==='api' ? (
+                <>
+                  <div className="flex items-center gap-2">
+                    <span className="px-2 py-1 rounded bg-emerald-100 text-emerald-700 text-[10px] font-bold shrink-0">POST</span>
+                    <input readOnly value="/v1/generate" className="flex-1 px-2 py-1 rounded border border-[#E8E8EF] bg-[#F7F7FA] text-xs text-[#374151] font-mono focus:outline-none"/>
+                    <button onClick={sendPlayground} disabled={apiLoading}
+                      className="px-3 py-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 text-white text-xs font-semibold transition-colors shrink-0">
+                      {apiLoading?'...':'Send'}
+                    </button>
+                  </div>
+                  <div>
+                    <p className="text-[10px] font-semibold text-[#9CA3AF] uppercase tracking-wider mb-1.5">Body</p>
+                    <textarea value={apiBody} onChange={(e) => setApiBody(e.target.value)} rows={5}
+                      className="w-full px-3 py-2 rounded-lg border border-[#E8E8EF] bg-[#F7F7FA] text-xs text-[#374151] font-mono focus:outline-none focus:border-indigo-300 resize-none"
+                    />
+                  </div>
+                  <div>
+                    <p className="text-[10px] font-semibold text-[#9CA3AF] uppercase tracking-wider mb-1.5">Response</p>
+                    {apiResponse ? (
+                      <div className="p-3 rounded-lg bg-[#F7F7FA] border border-[#E8E8EF] text-xs text-[#374151] leading-relaxed">{apiResponse}</div>
+                    ) : (
+                      <div className="flex gap-2">
+                        {['radial-gradient(ellipse at 40% 40%,#1e3a5f,#0a0a0a)','radial-gradient(ellipse at 60% 40%,#2d1b69,#0a0a0a)','radial-gradient(ellipse at 50% 60%,#1a2e1a,#0a0a0a)'].map((g,i) => (
+                          <div key={i} className="flex-1 h-14 rounded-lg" style={{background:g}}/>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                </>
+              ) : (
+                <div className="flex items-center justify-center h-20 text-xs text-[#9CA3AF]">{activePlayTab.charAt(0).toUpperCase()+activePlayTab.slice(1)} coming soon</div>
+              )}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* ── Bottom bar ───────────────────────────────────────────────────── */}
+      <div className="h-[88px] border-t border-[#E8E8EF] flex shrink-0 bg-white">
+        {/* Priority Mix */}
+        <div className="border-r border-[#E8E8EF] px-4 flex items-center gap-3 min-w-[170px]">
+          <svg width="60" height="52" viewBox="0 0 60 52">
+            <polygon points="30,3 57,49 3,49" fill="rgba(99,102,241,0.08)" stroke="#E8E8EF" strokeWidth="1.5"/>
+            <circle cx="30" cy="24" r="3.5" fill="#6366f1"/>
+            <text x="30" y="1.5" textAnchor="middle" fontSize="6.5" fill="#9CA3AF">Live</text>
+            <text x="1" y="56" textAnchor="start" fontSize="6.5" fill="#9CA3AF">Learn</text>
+            <text x="59" y="56" textAnchor="end" fontSize="6.5" fill="#9CA3AF">Play</text>
+          </svg>
+          <div className="space-y-1">
+            {[{label:'Live',pct:'60%',color:'bg-indigo-500'},{label:'Learn',pct:'20%',color:'bg-blue-400'},{label:'Play',pct:'20%',color:'bg-emerald-500'}].map(({label,pct,color}) => (
+              <div key={label} className="flex items-center gap-1.5 text-[10px] text-[#6B7280]">
+                <span className={`w-1.5 h-1.5 rounded-full ${color}`}/>{label} <span className="font-semibold text-[#374151]">{pct}</span>
+              </div>
             ))}
           </div>
         </div>
-      </div>
-    )
 
-    if (id === 'learn') return (
-      <div className="flex-1 flex flex-col min-h-0 overflow-hidden">
-        <div className="flex border-b border-[#F0F0F5] px-3 flex-shrink-0">
-          {[{ id: 'chat' as const, label: 'Ask AI' }, { id: 'transcript' as const, label: 'Transcript' }].map((t) => (
-            <button key={t.id} onClick={() => setLearnTab(t.id)}
-              className={`px-3 py-2 text-[11px] font-medium border-b-2 -mb-px transition-colors ${learnTab === t.id ? 'border-indigo-600 text-indigo-600' : 'border-transparent text-[#9CA3AF] hover:text-[#374151]'}`}>
-              {t.label}
-            </button>
-          ))}
-        </div>
-        <div className="flex-1 overflow-y-auto px-3 py-2 space-y-2 min-h-0">
-          {learnTab === 'chat' && (
-            <>
-              {learnMsgs.length === 0 && (
-                <div className="text-center py-8">
-                  <Brain size={24} className="text-[#E5E7EB] mx-auto mb-2" />
-                  <p className="text-[11px] text-[#9CA3AF]">Ask anything about this session.</p>
-                </div>
-              )}
-              {learnMsgs.map((m) => (
-                <div key={m.id} className={`flex gap-2 ${m.role === 'user' ? 'justify-end' : 'justify-start'}`}>
-                  {m.role === 'ai' && <div className="w-5 h-5 rounded-full bg-indigo-100 flex items-center justify-center flex-shrink-0 mt-0.5"><Brain size={10} className="text-indigo-600" /></div>}
-                  <div className={`max-w-[90%] px-2.5 py-2 rounded-lg text-[11px] leading-relaxed ${m.role === 'user' ? 'bg-indigo-600 text-white' : 'bg-[#F7F7FA] border border-[#E8E8EF] text-[#374151] whitespace-pre-wrap'}`}>{m.text}</div>
-                </div>
-              ))}
-              {learnLoading && (
-                <div className="flex items-center gap-2">
-                  <div className="w-5 h-5 rounded-full bg-indigo-100 flex items-center justify-center flex-shrink-0"><Brain size={10} className="text-indigo-600" /></div>
-                  <div className="flex gap-1 px-2.5 py-2 rounded-lg bg-[#F7F7FA] border border-[#E8E8EF]">
-                    {[0, 150, 300].map((d) => <span key={d} className="w-1.5 h-1.5 rounded-full bg-indigo-400 animate-bounce" style={{ animationDelay: `${d}ms` }} />)}
-                  </div>
-                </div>
-              )}
-              <div ref={learnEndRef} />
-            </>
-          )}
-          {learnTab === 'transcript' && <p className="text-[11px] text-[#9CA3AF] italic">Transcript will appear in real time.</p>}
-        </div>
-        {learnTab === 'chat' && (
-          <form onSubmit={askLearn} className="flex gap-2 px-3 py-2.5 border-t border-[#F0F0F5] flex-shrink-0">
-            <input value={learnQuery} onChange={(e) => setLearnQuery(e.target.value)}
-              placeholder="Ask about this session…"
-              className="flex-1 text-[11px] bg-[#F7F7FA] border border-[#E8E8EF] rounded-lg px-2.5 py-1.5 text-[#111827] placeholder-[#9CA3AF] focus:outline-none focus:border-indigo-300 min-w-0"
-            />
-            <button type="submit" disabled={!learnQuery.trim() || learnLoading}
-              className="w-7 h-7 rounded-lg bg-indigo-600 text-white flex items-center justify-center hover:bg-indigo-500 disabled:opacity-40 flex-shrink-0">
-              {learnLoading ? <Loader2 size={11} className="animate-spin" /> : <Send size={11} />}
-            </button>
-          </form>
-        )}
-      </div>
-    )
-
-    if (id === 'play') return (
-      <div className="flex-1 flex flex-col min-h-0 overflow-hidden">
-        <div className="flex-1 overflow-y-auto px-3 py-2.5 min-h-0 space-y-2">
-          <div>
-            <span className="text-[10px] font-semibold text-[#374151] block mb-1">Prompt</span>
-            <textarea value={playPrompt} onChange={(e) => setPlayPrompt(e.target.value)} rows={3}
-              className="w-full text-[10px] font-mono bg-[#F7F7FA] border border-[#E8E8EF] rounded-lg p-2 text-[#374151] leading-relaxed resize-none focus:outline-none focus:border-violet-300"
-            />
-          </div>
-          <button onClick={runPlay} disabled={playLoading}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-violet-600 text-white text-[10px] font-medium hover:bg-violet-500 disabled:opacity-40 transition-colors ml-auto">
-            {playLoading ? <><Loader2 size={10} className="animate-spin" /> Running…</> : <><Sparkles size={10} /> Run</>}
-          </button>
-          {playOutput ? (
-            <div className="text-[10px] text-[#374151] bg-[#F7F7FA] border border-[#E8E8EF] rounded-lg p-2.5 leading-relaxed whitespace-pre-wrap">{playOutput}</div>
-          ) : (
-            <div className="grid grid-cols-3 gap-1.5 mt-1">
-              {[0, 1, 2].map((i) => <div key={i} className="h-10 rounded-lg" style={{ background: `linear-gradient(135deg, #ede9fe ${i * 20}%, #c4b5fd)` }} />)}
-            </div>
-          )}
-        </div>
-      </div>
-    )
-
-    return null
-  }
-
-  // Panel meta
-  const panelMeta: Record<string, { title: string; icon: React.ReactNode; headerChildren?: React.ReactNode }> = {
-    live: {
-      title: 'Live Session',
-      icon: <Radio size={13} className="text-red-500" />,
-      headerChildren: (
-        <>
-          <span className="text-[9px] font-mono text-[#9CA3AF]">{roomId}</span>
-          <span className="flex items-center gap-1 text-[9px] text-[#9CA3AF]"><Users size={10} />128</span>
-        </>
-      ),
-    },
-    chat: {
-      title: 'Live Chat',
-      icon: (
-        <span className="relative flex h-1.5 w-1.5">
-          <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75" />
-          <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-green-400" />
-        </span>
-      ),
-    },
-    canvas: {
-      title: 'Canvas',
-      icon: <Frame size={13} className="text-indigo-500" />,
-    },
-    learn: {
-      title: 'Learn',
-      icon: <BookOpen size={13} className="text-blue-500" />,
-      headerChildren: (
-        <button onClick={() => setLearnTab('chat')}
-          className="flex items-center gap-1 px-1.5 py-0.5 rounded bg-indigo-600 text-white text-[9px] font-medium hover:bg-indigo-500 transition-colors">
-          <Sparkles size={9} /> Ask AI
-        </button>
-      ),
-    },
-    play: {
-      title: 'Playground',
-      icon: <Code2 size={13} className="text-violet-500" />,
-    },
-  }
-
-  return (
-    <div className="h-screen overflow-hidden flex flex-col bg-[#F7F7FA]" style={{ fontFamily: 'system-ui, -apple-system, sans-serif' }}>
-
-      {/* Top bar */}
-      <div className="h-12 flex items-center px-4 gap-3 bg-white border-b border-[#E8E8EF] flex-shrink-0 z-50">
-        <div className="flex items-center gap-2 mr-2">
-          <div className="w-7 h-7 rounded-lg bg-indigo-600 flex items-center justify-center">
-            <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
-              <path d="M7 1L13 4.5V10L7 13.5L1 10V4.5L7 1Z" fill="white" fillOpacity=".9" />
-              <path d="M7 1L13 4.5L7 8L1 4.5L7 1Z" fill="white" fillOpacity=".5" />
-            </svg>
-          </div>
-          <span className="text-sm font-bold text-[#111827]">Sandbox</span>
-        </div>
-
-        <div className="w-px h-5 bg-[#E8E8EF]" />
-
-        <div className="flex items-center gap-1">
-          {[
-            { label: 'Live',  dot: true  },
-            { label: 'Learn', dot: false },
-            { label: 'Play',  dot: false },
-          ].map(({ label, dot }) => (
-            <button key={label} className={`flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium transition-colors ${label === 'Live' ? 'bg-red-50 text-red-600' : 'text-[#6B7280] hover:bg-gray-100'}`}>
-              {dot && (
-                <span className="relative flex h-1.5 w-1.5">
-                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75" />
-                  <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-red-500" />
-                </span>
-              )}
-              {label}
-            </button>
-          ))}
-        </div>
-
-        <div className="flex-1" />
-
-        <div className="flex items-center gap-2">
-          <button onClick={resetLayout} title="Reset layout" className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border border-[#E8E8EF] text-xs text-[#6B7280] hover:bg-gray-50 transition-colors">
-            <LayoutGrid size={12} /> Reset layout
-          </button>
-          <button className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border border-[#E8E8EF] text-xs font-medium text-[#374151] hover:bg-gray-50 transition-colors">
-            <Share2 size={12} /> Share
-          </button>
-          <div className="flex items-center gap-1 text-xs text-[#6B7280]"><Users size={13} /><span className="font-medium">128</span></div>
-          <div className="w-7 h-7 rounded-full bg-indigo-600 flex items-center justify-center text-white text-[10px] font-bold">KN</div>
-          <button onClick={() => navigate({ to: '/live' })} className="w-7 h-7 flex items-center justify-center rounded-lg text-[#9CA3AF] hover:bg-red-50 hover:text-red-500 transition-colors">
-            <X size={14} />
-          </button>
-        </div>
-      </div>
-
-      {/* Canvas — draggable panels */}
-      <div className="flex-1 relative overflow-auto canvas-grid">
-        {panels.map((box) => {
-          const meta = panelMeta[box.id]
-          if (!meta) return null
-          return (
-            <div
-              key={box.id}
-              onMouseDown={() => bringToFront(box.id)}
-              style={{
-                position: 'absolute',
-                left: box.x,
-                top: box.y,
-                width: box.w,
-                height: box.minimized ? 40 : box.h,
-                zIndex: box.z,
-              }}
-              className="flex flex-col bg-white rounded-2xl border border-[#E8E8EF] panel-shadow hover:panel-shadow-active transition-shadow overflow-hidden"
-            >
-              <PanelHeader
-                title={meta.title}
-                icon={meta.icon}
-                onDragStart={(e) => startDrag(box.id, e)}
-                onMinimize={() => updatePanel(box.id, { minimized: !box.minimized })}
-                minimized={box.minimized}
+        {/* Quick layouts */}
+        <div className="border-r border-[#E8E8EF] px-4 flex items-center gap-3 flex-1 min-w-0">
+          <p className="text-[10px] font-semibold text-[#374151] shrink-0">Quick layouts</p>
+          <div className="flex gap-1.5 overflow-x-auto">
+            {[
+              {id:'presenter',cols:[[1],[.35,.65]]},
+              {id:'canvas',cols:[[.25,.5,.25]]},
+              {id:'learn',cols:[[.25,.35,.4]]},
+              {id:'play',cols:[[.3,.3,.4]]},
+              {id:'balanced',cols:[[.33,.33,.34]]},
+            ].map((l) => (
+              <button key={l.id} onClick={() => setActiveLayout(l.id)}
+                className={`shrink-0 w-12 h-9 rounded border flex flex-col gap-0.5 p-0.5 transition-all ${activeLayout===l.id?'border-indigo-400 bg-indigo-50':'border-[#E8E8EF] hover:border-[#D1D5DB]'}`}
               >
-                {meta.headerChildren}
-              </PanelHeader>
+                {l.cols.map((row,ri) => (
+                  <div key={ri} className="flex flex-1 gap-0.5">
+                    {row.map((w,ci) => <div key={ci} className={`rounded-sm ${activeLayout===l.id?'bg-indigo-200':'bg-[#E8E8EF]'}`} style={{flex:w}}/>)}
+                  </div>
+                ))}
+              </button>
+            ))}
+          </div>
+        </div>
 
-              {renderContent(box.id, box)}
-
-              {!box.minimized && <ResizeHandle onResizeStart={(e) => startResize(box.id, e)} />}
+        {/* Canvas controls */}
+        <div className="border-r border-[#E8E8EF] px-4 flex items-center gap-4 min-w-[200px]">
+          <div>
+            <p className="text-[10px] font-semibold text-[#374151] mb-1.5">Canvas controls</p>
+            <div className="flex gap-1">
+              {[Grid3X3,Maximize2,Magnet,Lock,Settings].map((Icon,i) => (
+                <button key={i} className="w-6 h-6 flex items-center justify-center rounded hover:bg-[#F7F7FA] text-[#6B7280] transition-colors"><Icon size={12}/></button>
+              ))}
             </div>
-          )
-        })}
+          </div>
+          <div>
+            <p className="text-[10px] font-semibold text-[#374151] mb-1.5">Infinite canvas</p>
+            <button onClick={() => setInfiniteCanvas(!infiniteCanvas)}
+              className={`w-9 h-[18px] rounded-full flex items-center px-0.5 transition-colors ${infiniteCanvas?'bg-indigo-500':'bg-[#D1D5DB]'}`}>
+              <div className={`w-3.5 h-3.5 bg-white rounded-full shadow transition-transform ${infiniteCanvas?'translate-x-[18px]':''}`}/>
+            </button>
+          </div>
+        </div>
+
+        {/* View */}
+        <div className="px-4 flex items-center min-w-[110px]">
+          <div>
+            <p className="text-[10px] font-semibold text-[#374151] mb-1.5">View</p>
+            <div className="w-20 h-11 rounded border border-[#E8E8EF] bg-[#F7F7FA] flex gap-0.5 p-1">
+              <div className="w-4 bg-indigo-100 rounded-sm"/>
+              <div className="flex-1 flex flex-col gap-0.5">
+                <div className="flex-1 bg-violet-100 rounded-sm"/>
+                <div className="flex-1 bg-emerald-100 rounded-sm"/>
+              </div>
+              <div className="w-4 bg-amber-100 rounded-sm"/>
+            </div>
+          </div>
+        </div>
       </div>
     </div>
   )
