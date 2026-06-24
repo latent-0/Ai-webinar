@@ -9,6 +9,7 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "@anthropic-ai/sdk": "^0.105.0",
     "@google/generative-ai": "^0.21.0",
     "@jitsi/react-sdk": "^1.4.0",
     "@tanstack/react-router": "^1.51.0",
