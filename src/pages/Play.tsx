@@ -1,7 +1,8 @@
 import { useState, useRef, useEffect } from 'react'
-import { Gamepad2, Send, Brain, Sparkles, Image, Table, Layers, Wrench, Code, Puzzle } from 'lucide-react'
+import { Gamepad2, Send, Brain, Sparkles, Image, Table, Layers, Wrench, Code, Puzzle, ChevronDown } from 'lucide-react'
 import { useAppStore } from '../store'
 import { askGemini } from '../lib/gemini'
+import { askClaude, CLAUDE_MODELS } from '../lib/claude'
 
 const tools = [
   { id: 'photoshop', icon: Image, label: 'Photoshop', badge: 'Creative', color: 'blue' },
@@ -28,11 +29,20 @@ const colorClasses: Record<string, { active: string; idle: string }> = {
   rose:    { active: 'bg-rose-50 border-rose-200 text-rose-700',      idle: 'bg-white border-[#E8E8EF] text-[#6B7280] hover:border-rose-200 hover:text-rose-600' },
 }
 
+type AIProvider = 'gemini' | 'claude'
+
+const AI_PROVIDERS = [
+  { id: 'gemini' as AIProvider, label: 'Gemini 2.5 Flash', badge: 'Google' },
+  ...CLAUDE_MODELS.map((m) => ({ id: 'claude' as AIProvider, label: m.label, badge: 'Anthropic', modelId: m.id })),
+]
+
 export default function Play() {
   const { playMessages, addPlayMessage } = useAppStore()
   const [input, setInput] = useState('')
   const [loading, setLoading] = useState(false)
   const [activeTool, setActiveTool] = useState<string | null>(null)
+  const [selectedAI, setSelectedAI] = useState(AI_PROVIDERS[0])
+  const [aiDropdownOpen, setAiDropdownOpen] = useState(false)
   const messagesEndRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
@@ -51,7 +61,12 @@ export default function Play() {
       const context = tool
         ? `You are an AI mentor helping the user experiment with ${tool.label}. Be practical and guide them step-by-step.`
         : 'You are an AI mentor helping the user explore creative and professional tools. Be practical and encouraging.'
-      const answer = await askGemini(msg, context)
+      let answer: string
+      if (selectedAI.id === 'claude' && 'modelId' in selectedAI) {
+        answer = await askClaude(msg, context, selectedAI.modelId)
+      } else {
+        answer = await askGemini(msg, context)
+      }
       addPlayMessage({ id: (Date.now() + 1).toString(), role: 'assistant', content: answer, timestamp: new Date() })
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : String(err)
@@ -186,6 +201,32 @@ export default function Play() {
               placeholder={activeToolData ? `Ask about ${activeToolData.label}...` : 'Ask your AI mentor...'}
               className="flex-1 px-4 py-2.5 rounded-lg bg-[#F7F7FA] border border-[#E8E8EF] text-sm text-[#111827] placeholder-[#9CA3AF] focus:outline-none focus:border-violet-400"
             />
+            <div className="relative">
+              <button
+                type="button"
+                onClick={() => setAiDropdownOpen(!aiDropdownOpen)}
+                className="flex items-center gap-1.5 px-3 py-2.5 rounded-lg bg-[#F7F7FA] border border-[#E8E8EF] text-xs text-[#374151] hover:border-violet-300 transition-colors whitespace-nowrap"
+              >
+                <span className="font-medium">{selectedAI.label}</span>
+                <span className="text-[10px] text-[#9CA3AF]">{selectedAI.badge}</span>
+                <ChevronDown size={12} className="text-[#9CA3AF]" />
+              </button>
+              {aiDropdownOpen && (
+                <div className="absolute bottom-full right-0 mb-1 w-56 bg-white border border-[#E8E8EF] rounded-lg shadow-lg z-10 overflow-hidden">
+                  {AI_PROVIDERS.map((p, i) => (
+                    <button
+                      key={i}
+                      type="button"
+                      onClick={() => { setSelectedAI(p); setAiDropdownOpen(false) }}
+                      className={`w-full flex items-center justify-between px-3 py-2 text-left text-xs hover:bg-[#F7F7FA] transition-colors ${selectedAI.label === p.label ? 'bg-violet-50 text-violet-700' : 'text-[#374151]'}`}
+                    >
+                      <span className="font-medium">{p.label}</span>
+                      <span className="text-[10px] text-[#9CA3AF] ml-2">{p.badge}</span>
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
             <button
               type="submit"
               disabled={!input.trim() || loading}
