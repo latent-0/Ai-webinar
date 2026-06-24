@@ -20,12 +20,12 @@ const scenarios = [
 ]
 
 const colorClasses: Record<string, { active: string; idle: string }> = {
-  blue:    { active: 'bg-blue-500/20 border-blue-500/40 text-blue-400',    idle: 'bg-[#16161F] border-[#2A2A3A] text-[#888899] hover:border-blue-500/30 hover:text-blue-300' },
-  emerald: { active: 'bg-emerald-500/20 border-emerald-500/40 text-emerald-400', idle: 'bg-[#16161F] border-[#2A2A3A] text-[#888899] hover:border-emerald-500/30 hover:text-emerald-300' },
-  violet:  { active: 'bg-violet-500/20 border-violet-500/40 text-violet-400',  idle: 'bg-[#16161F] border-[#2A2A3A] text-[#888899] hover:border-violet-500/30 hover:text-violet-300' },
-  amber:   { active: 'bg-amber-500/20 border-amber-500/40 text-amber-400',   idle: 'bg-[#16161F] border-[#2A2A3A] text-[#888899] hover:border-amber-500/30 hover:text-amber-300' },
-  cyan:    { active: 'bg-cyan-500/20 border-cyan-500/40 text-cyan-400',    idle: 'bg-[#16161F] border-[#2A2A3A] text-[#888899] hover:border-cyan-500/30 hover:text-cyan-300' },
-  rose:    { active: 'bg-rose-500/20 border-rose-500/40 text-rose-400',    idle: 'bg-[#16161F] border-[#2A2A3A] text-[#888899] hover:border-rose-500/30 hover:text-rose-300' },
+  blue:    { active: 'bg-blue-50 border-blue-200 text-blue-700',       idle: 'bg-white border-[#E8E8EF] text-[#6B7280] hover:border-blue-200 hover:text-blue-600' },
+  emerald: { active: 'bg-emerald-50 border-emerald-200 text-emerald-700', idle: 'bg-white border-[#E8E8EF] text-[#6B7280] hover:border-emerald-200 hover:text-emerald-600' },
+  violet:  { active: 'bg-violet-50 border-violet-200 text-violet-700',   idle: 'bg-white border-[#E8E8EF] text-[#6B7280] hover:border-violet-200 hover:text-violet-600' },
+  amber:   { active: 'bg-amber-50 border-amber-200 text-amber-700',    idle: 'bg-white border-[#E8E8EF] text-[#6B7280] hover:border-amber-200 hover:text-amber-600' },
+  cyan:    { active: 'bg-cyan-50 border-cyan-200 text-cyan-700',      idle: 'bg-white border-[#E8E8EF] text-[#6B7280] hover:border-cyan-200 hover:text-cyan-600' },
+  rose:    { active: 'bg-rose-50 border-rose-200 text-rose-700',      idle: 'bg-white border-[#E8E8EF] text-[#6B7280] hover:border-rose-200 hover:text-rose-600' },
 }
 
 export default function Play() {
@@ -64,19 +64,19 @@ export default function Play() {
   const activeToolData = tools.find((t) => t.id === activeTool)
 
   return (
-    <div className="flex h-screen overflow-hidden">
+    <div className="flex h-screen overflow-hidden bg-[#F7F7FA]">
       {/* Left panel */}
-      <div className="w-64 bg-[#111118] border-r border-[#1E1E2E] flex flex-col shrink-0 overflow-y-auto">
-        <div className="px-4 py-4 border-b border-[#1E1E2E] sticky top-0 bg-[#111118] z-10">
+      <div className="w-64 bg-white border-r border-[#E8E8EF] flex flex-col shrink-0 overflow-y-auto">
+        <div className="px-4 py-4 border-b border-[#E8E8EF] sticky top-0 bg-white z-10">
           <div className="flex items-center gap-2">
-            <Gamepad2 size={16} className="text-violet-400" />
-            <span className="text-sm font-semibold text-white">Sandbox</span>
+            <Gamepad2 size={16} className="text-violet-600" />
+            <span className="text-sm font-semibold text-[#111827]">Sandbox</span>
           </div>
-          <p className="text-xs text-[#555566] mt-0.5">Experiment with AI as mentor</p>
+          <p className="text-xs text-[#9CA3AF] mt-0.5">Experiment with AI as mentor</p>
         </div>
 
         <div className="p-3">
-          <p className="text-xs text-[#555566] uppercase tracking-wider mb-2 px-1">Tools</p>
+          <p className="text-xs text-[#9CA3AF] uppercase tracking-wider mb-2 px-1">Tools</p>
           <div className="grid grid-cols-2 gap-1.5">
             {tools.map((tool) => {
               const Icon = tool.icon
@@ -90,24 +90,24 @@ export default function Play() {
                 >
                   <Icon size={15} className="mb-1.5" />
                   <p className="text-xs font-medium leading-tight">{tool.label}</p>
-                  <p className="text-[10px] opacity-50 mt-0.5">{tool.badge}</p>
+                  <p className="text-[10px] opacity-60 mt-0.5">{tool.badge}</p>
                 </button>
               )
             })}
           </div>
         </div>
 
-        <div className="p-3 border-t border-[#1E1E2E]">
-          <p className="text-xs text-[#555566] uppercase tracking-wider mb-2 px-1">Scenarios</p>
+        <div className="p-3 border-t border-[#E8E8EF]">
+          <p className="text-xs text-[#9CA3AF] uppercase tracking-wider mb-2 px-1">Scenarios</p>
           <div className="space-y-1.5">
             {scenarios.map((s) => (
               <button
                 key={s.id}
                 onClick={() => setInput(`I want to: ${s.title}. Help me get started step by step.`)}
-                className="w-full p-3 rounded-lg bg-[#16161F] border border-[#2A2A3A] hover:border-violet-500/30 text-left transition-all group"
+                className="w-full p-3 rounded-lg bg-[#F7F7FA] border border-[#E8E8EF] hover:border-violet-200 text-left transition-all group"
               >
-                <p className="text-xs font-medium text-white leading-tight group-hover:text-violet-300">{s.title}</p>
-                <p className="text-[10px] text-[#555566] mt-1">{s.tools} · {s.difficulty}</p>
+                <p className="text-xs font-medium text-[#111827] leading-tight group-hover:text-violet-700">{s.title}</p>
+                <p className="text-[10px] text-[#9CA3AF] mt-1">{s.tools} · {s.difficulty}</p>
               </button>
             ))}
           </div>
@@ -116,17 +116,17 @@ export default function Play() {
 
       {/* AI Mentor chat */}
       <div className="flex-1 flex flex-col min-w-0">
-        <div className="px-6 py-4 border-b border-[#1E1E2E] shrink-0">
+        <div className="px-6 py-4 border-b border-[#E8E8EF] bg-white shrink-0">
           <div className="flex items-center gap-2">
-            <Brain size={16} className="text-violet-400" />
-            <span className="text-sm font-semibold text-white">AI Mentor</span>
+            <Brain size={16} className="text-violet-600" />
+            <span className="text-sm font-semibold text-[#111827]">AI Mentor</span>
             {activeToolData && (
-              <span className="ml-1 px-2 py-0.5 rounded-full bg-violet-500/20 text-violet-400 text-xs">
+              <span className="ml-1 px-2 py-0.5 rounded-full bg-violet-50 text-violet-700 text-xs border border-violet-100">
                 {activeToolData.label}
               </span>
             )}
           </div>
-          <p className="text-xs text-[#555566] mt-0.5">
+          <p className="text-xs text-[#9CA3AF] mt-0.5">
             {activeToolData ? `Experimenting with ${activeToolData.label}` : 'Select a tool or scenario to begin'}
           </p>
         </div>
@@ -134,13 +134,13 @@ export default function Play() {
         <div className="flex-1 overflow-y-auto p-6 space-y-4">
           {playMessages.length === 0 && (
             <div className="max-w-lg">
-              <div className="p-4 rounded-xl bg-violet-500/10 border border-violet-500/20">
+              <div className="p-4 rounded-xl bg-violet-50 border border-violet-100">
                 <div className="flex items-center gap-2 mb-2">
-                  <Sparkles size={14} className="text-violet-400" />
-                  <span className="text-xs font-semibold text-violet-400">Your AI Mentor is ready</span>
+                  <Sparkles size={14} className="text-violet-600" />
+                  <span className="text-xs font-semibold text-violet-700">Your AI Mentor is ready</span>
                 </div>
-                <p className="text-xs text-[#CCCCDD] leading-relaxed">
-                  Select a tool from the panel to start experimenting, pick a pre-built scenario, or just ask me anything. I'll guide you step-by-step using knowledge from the Learn hub.
+                <p className="text-xs text-[#374151] leading-relaxed">
+                  Select a tool from the panel to start experimenting, pick a pre-built scenario, or just ask me anything. I'll guide you step-by-step.
                 </p>
               </div>
             </div>
@@ -149,14 +149,14 @@ export default function Play() {
           {playMessages.map((msg) => (
             <div key={msg.id} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
               {msg.role === 'assistant' && (
-                <div className="w-6 h-6 rounded-full bg-violet-500/20 flex items-center justify-center mr-2 shrink-0 mt-0.5">
-                  <Brain size={12} className="text-violet-400" />
+                <div className="w-6 h-6 rounded-full bg-violet-100 flex items-center justify-center mr-2 shrink-0 mt-0.5">
+                  <Brain size={12} className="text-violet-600" />
                 </div>
               )}
               <div className={`max-w-2xl px-4 py-3 rounded-xl text-sm leading-relaxed ${
                 msg.role === 'user'
-                  ? 'bg-violet-500/20 text-violet-100 ml-8'
-                  : 'bg-[#111118] border border-[#1E1E2E] text-[#CCCCDD]'
+                  ? 'bg-violet-600 text-white ml-8'
+                  : 'bg-white border border-[#E8E8EF] text-[#374151] shadow-sm'
               }`}>
                 {msg.content}
               </div>
@@ -165,10 +165,10 @@ export default function Play() {
 
           {loading && (
             <div className="flex items-center gap-2">
-              <div className="w-6 h-6 rounded-full bg-violet-500/20 flex items-center justify-center shrink-0">
-                <Brain size={12} className="text-violet-400" />
+              <div className="w-6 h-6 rounded-full bg-violet-100 flex items-center justify-center shrink-0">
+                <Brain size={12} className="text-violet-600" />
               </div>
-              <div className="flex gap-1 px-4 py-3 rounded-xl bg-[#111118] border border-[#1E1E2E]">
+              <div className="flex gap-1 px-4 py-3 rounded-xl bg-white border border-[#E8E8EF] shadow-sm">
                 {[0, 150, 300].map((d) => (
                   <span key={d} className="w-1.5 h-1.5 rounded-full bg-violet-400 animate-bounce" style={{ animationDelay: `${d}ms` }} />
                 ))}
@@ -178,18 +178,18 @@ export default function Play() {
           <div ref={messagesEndRef} />
         </div>
 
-        <form onSubmit={sendMessage} className="px-6 py-4 border-t border-[#1E1E2E] shrink-0">
+        <form onSubmit={sendMessage} className="px-6 py-4 border-t border-[#E8E8EF] bg-white shrink-0">
           <div className="flex gap-3">
             <input
               value={input}
               onChange={(e) => setInput(e.target.value)}
               placeholder={activeToolData ? `Ask about ${activeToolData.label}...` : 'Ask your AI mentor...'}
-              className="flex-1 px-4 py-2.5 rounded-lg bg-[#111118] border border-[#1E1E2E] text-sm text-white placeholder-[#555566] focus:outline-none focus:border-violet-500/50"
+              className="flex-1 px-4 py-2.5 rounded-lg bg-[#F7F7FA] border border-[#E8E8EF] text-sm text-[#111827] placeholder-[#9CA3AF] focus:outline-none focus:border-violet-400"
             />
             <button
               type="submit"
               disabled={!input.trim() || loading}
-              className="px-4 py-2.5 rounded-lg bg-violet-500/20 hover:bg-violet-500/30 disabled:opacity-40 text-violet-400 transition-colors"
+              className="px-4 py-2.5 rounded-lg bg-violet-600 hover:bg-violet-500 disabled:opacity-40 text-white transition-colors"
             >
               <Send size={15} />
             </button>

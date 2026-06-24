@@ -1,156 +1,154 @@
 import { Link } from '@tanstack/react-router'
-import { Radio, BookOpen, Gamepad2, ArrowRight, Zap, Brain, Database, Wrench, ChevronRight, Sparkles } from 'lucide-react'
+import { Radio, BookOpen, Gamepad2, ArrowRight, Brain, Database, Wrench, Sparkles, Zap, Users } from 'lucide-react'
 import ParticleHeadline from '../components/ParticleHeadline'
 
 const modes = [
   {
-    id: 'live',
-    tag: '01',
-    title: 'Live',
-    subtitle: 'Engage in real time',
-    icon: Radio,
-    color: 'text-blue-400',
-    cardBorder: 'border-blue-500/20 hover:border-blue-500/40',
-    iconBg: 'bg-blue-500/10',
-    dotColor: 'bg-blue-400',
-    topLine: 'from-transparent via-blue-500/50 to-transparent',
-    href: '/live',
-    description: 'Host webinars with AI-powered Q&A, live reactions, and intelligent audience engagement that adapts to your room.',
-    features: ['AI synthesises audience questions', 'Real-time participant tracking', 'Live polls & reactions', 'In-session knowledge capture'],
+    id: 'live',  tag: '01', title: 'Live',  subtitle: 'Engage in real time',  icon: Radio,
+    accent: 'indigo', href: '/live',
+    description: 'Host webinars with AI-powered Q&A, live reactions, and intelligent audience engagement.',
+    features: ['AI synthesises questions', 'Real-time participant tracking', 'Live polls & reactions', 'Knowledge capture'],
+    dot: 'bg-indigo-500',
   },
   {
-    id: 'learn',
-    tag: '02',
-    title: 'Learn',
-    subtitle: 'Build deep knowledge',
-    icon: BookOpen,
-    color: 'text-emerald-400',
-    cardBorder: 'border-emerald-500/20 hover:border-emerald-500/40',
-    iconBg: 'bg-emerald-500/10',
-    dotColor: 'bg-emerald-400',
-    topLine: 'from-transparent via-emerald-500/50 to-transparent',
-    href: '/learn',
-    description: 'RAG-powered knowledge hub with domain-specific AI. From dentistry to digital marketing — expert-level depth on demand.',
-    features: ['6 curated domain knowledge bases', 'AI-generated learning paths', 'Structured Q&A with memory', 'Contextual follow-up questions'],
+    id: 'learn', tag: '02', title: 'Learn', subtitle: 'Build deep knowledge', icon: BookOpen,
+    accent: 'emerald', href: '/learn',
+    description: 'RAG-powered knowledge hub with domain-specific AI. Expert-level depth on demand.',
+    features: ['6 curated knowledge bases', 'AI learning paths', 'Structured Q&A', 'Session memory'],
+    dot: 'bg-emerald-500',
   },
   {
-    id: 'play',
-    tag: '03',
-    title: 'Play',
-    subtitle: 'Experiment & discover',
-    icon: Gamepad2,
-    color: 'text-violet-400',
-    cardBorder: 'border-violet-500/20 hover:border-violet-500/40',
-    iconBg: 'bg-violet-500/10',
-    dotColor: 'bg-violet-400',
-    topLine: 'from-transparent via-violet-500/50 to-transparent',
-    href: '/play',
-    description: 'A sandbox for hands-on tool exploration with an always-on AI mentor. Learn by doing — not watching slide decks.',
-    features: ['6 integrated professional tools', 'Step-by-step AI guidance', 'Pre-built real-world scenarios', 'Creative workflow generation'],
+    id: 'play',  tag: '03', title: 'Play',  subtitle: 'Experiment & discover', icon: Gamepad2,
+    accent: 'violet', href: '/play',
+    description: 'A sandbox for hands-on tool exploration with an always-on AI mentor. Learn by doing.',
+    features: ['6 integrated tools', 'Step-by-step guidance', 'Real-world scenarios', 'Creative workflows'],
+    dot: 'bg-violet-500',
   },
-]
-
-const pillars = [
-  { icon: Brain, label: 'Reasoning', desc: 'Thinks before answering' },
-  { icon: Database, label: 'Knowledge', desc: 'RAG across all domains' },
-  { icon: Wrench, label: 'Tools', desc: 'Real software, real tasks' },
 ]
 
 const stats = [
-  { value: '3', label: 'Core modes' },
-  { value: '6', label: 'Knowledge domains' },
-  { value: '6', label: 'Integrated tools' },
+  { value: '3',  label: 'Core modes',        sub: 'Live · Learn · Play'        },
+  { value: '6',  label: 'Knowledge domains', sub: 'Dental to digital marketing' },
+  { value: '6',  label: 'Integrated tools',  sub: 'Pro-grade sandbox'           },
+  { value: '∞',  label: 'AI context',        sub: 'Persistent session memory'   },
+]
+
+const pillars = [
+  { icon: Brain,    label: 'Reasoning', desc: 'Thinks before answering',  color: 'text-indigo-600',  bg: 'bg-indigo-50'  },
+  { icon: Database, label: 'Knowledge', desc: 'RAG across all domains',   color: 'text-emerald-600', bg: 'bg-emerald-50' },
+  { icon: Wrench,   label: 'Tools',     desc: 'Real software, real tasks', color: 'text-violet-600',  bg: 'bg-violet-50'  },
 ]
 
 export default function Landing() {
   return (
-    <div className="min-h-screen relative">
-      {/* Ambient glow */}
-      <div className="fixed inset-0 -z-10 overflow-hidden pointer-events-none">
-        <div className="absolute -top-32 left-[10%] w-[600px] h-[600px] bg-blue-600/[0.055] rounded-full blur-[130px]" />
-        <div className="absolute top-[40%] right-[5%] w-[450px] h-[450px] bg-violet-600/[0.04] rounded-full blur-[110px]" />
-        <div className="absolute bottom-[15%] left-[35%] w-[400px] h-[400px] bg-emerald-600/[0.03] rounded-full blur-[100px]" />
-      </div>
+    <div className="bg-white min-h-screen">
 
-      {/* Hero */}
-      <section className="px-6 lg:px-10 pt-14 pb-10 max-w-[1100px] mx-auto">
-        {/* Status row */}
-        <div className="flex items-center gap-3 mb-8">
-          <div className="inline-flex items-center gap-2.5 px-3.5 py-1.5 rounded-full border border-white/[0.08] bg-white/[0.03] backdrop-blur-sm">
+      {/* ── Hero ─────────────────────────────────────────────── */}
+      <section className="px-6 lg:px-12 pt-16 pb-10 max-w-[1200px] mx-auto">
+        <div className="flex items-center gap-2 mb-8">
+          <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-indigo-50 border border-indigo-100">
             <span className="relative flex h-1.5 w-1.5">
               <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-60" />
-              <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-emerald-400" />
+              <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-emerald-500" />
             </span>
-            <span className="text-xs text-[#9999AA] font-medium">Platform live</span>
+            <span className="text-xs text-indigo-700 font-medium">Platform live</span>
           </div>
-          <span className="hidden lg:flex items-center gap-1.5 text-xs text-[#4A4A5A]">
+          <span className="hidden sm:flex items-center gap-1.5 text-xs text-[#9CA3AF]">
             <Sparkles size={10} />
             AI-powered webinars · learning · tool sandbox
           </span>
         </div>
 
-        {/* Particle headline */}
-        <ParticleHeadline />
+        <div className="grid lg:grid-cols-[1fr_360px] gap-12 items-center">
+          <div>
+            <ParticleHeadline />
+            <p className="text-lg text-[#6B7280] max-w-[420px] leading-relaxed mt-6 mb-8">
+              Agentic AI that listens, learns, and responds — delivering a personalised intelligence layer to every participant.
+            </p>
+            <div className="flex flex-wrap gap-3">
+              <Link to="/live" className="group flex items-center gap-2 px-5 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-semibold text-sm transition-all hover:shadow-lg hover:shadow-indigo-200 hover:-translate-y-px">
+                Start a session
+                <ArrowRight size={15} className="group-hover:translate-x-0.5 transition-transform" />
+              </Link>
+              <Link to="/learn" className="flex items-center gap-1.5 px-5 py-2.5 rounded-xl border border-[#E5E7EB] text-[#374151] hover:bg-gray-50 font-medium text-sm transition-colors">
+                Explore knowledge hub
+              </Link>
+            </div>
+          </div>
 
-        {/* Subtitle + CTAs */}
-        <p className="text-[1.05rem] text-[#6B6B85] max-w-[460px] leading-relaxed mt-6 mb-8 font-light">
-          Agentic AI that listens, learns, and responds — delivering a personalised intelligence layer to every participant.
-        </p>
-
-        <div className="flex flex-wrap items-center gap-3">
-          <Link
-            to="/live"
-            className="group flex items-center gap-2 px-5 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-semibold text-sm transition-all hover:shadow-xl hover:shadow-blue-500/25 hover:-translate-y-px"
-          >
-            Start a session
-            <ArrowRight size={15} className="group-hover:translate-x-0.5 transition-transform" />
-          </Link>
-          <Link
-            to="/learn"
-            className="flex items-center gap-1 px-5 py-2.5 rounded-xl text-[#8888AA] hover:text-white font-medium text-sm transition-colors"
-          >
-            Explore knowledge hub <ChevronRight size={14} />
-          </Link>
+          {/* Mini bento preview */}
+          <div className="hidden lg:grid grid-cols-2 gap-3">
+            {[
+              { label: 'Live Session',  sub: '128 participants', color: 'bg-indigo-600',  icon: Radio     },
+              { label: 'AI Notes',      sub: '5 key takeaways',  color: 'bg-emerald-600', icon: Brain     },
+              { label: 'Playground',    sub: 'API running',       color: 'bg-violet-600',  icon: Zap       },
+              { label: 'Participants',  sub: '128 online',        color: 'bg-amber-500',   icon: Users     },
+            ].map(({ label, sub, color, icon: Icon }) => (
+              <div key={label} className="p-4 rounded-2xl bg-white border border-[#E8E8EF] shadow-sm hover:shadow-md transition-shadow">
+                <div className={`w-8 h-8 rounded-xl ${color} flex items-center justify-center mb-3`}>
+                  <Icon size={14} className="text-white" />
+                </div>
+                <p className="text-sm font-semibold text-[#111827]">{label}</p>
+                <p className="text-xs text-[#9CA3AF] mt-0.5">{sub}</p>
+              </div>
+            ))}
+          </div>
         </div>
       </section>
 
-      {/* Mode cards */}
-      <section className="px-6 lg:px-10 pb-12 max-w-[1100px] mx-auto">
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-3">
+      <div className="border-t border-[#F0F0F5]" />
+
+      {/* ── Stats ────────────────────────────────────────────── */}
+      <section className="px-6 lg:px-12 py-8 max-w-[1200px] mx-auto">
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+          {stats.map(({ value, label, sub }) => (
+            <div key={label} className="p-5 rounded-2xl bg-[#FAFAFA] border border-[#F0F0F5]">
+              <p className="text-3xl font-bold text-[#111827] tracking-tight">{value}</p>
+              <p className="text-sm font-semibold text-[#374151] mt-1">{label}</p>
+              <p className="text-xs text-[#9CA3AF] mt-0.5">{sub}</p>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      {/* ── Mode cards ───────────────────────────────────────── */}
+      <section className="px-6 lg:px-12 pb-12 max-w-[1200px] mx-auto">
+        <p className="text-xs font-semibold text-[#9CA3AF] uppercase tracking-wider mb-5">Three modes, one platform</p>
+        <div className="grid lg:grid-cols-3 gap-4">
           {modes.map((mode) => {
             const Icon = mode.icon
+            const grad = mode.accent === 'indigo' ? 'from-indigo-500 to-indigo-600'
+              : mode.accent === 'emerald' ? 'from-emerald-500 to-emerald-600'
+              : 'from-violet-500 to-violet-600'
+            const textColor = mode.accent === 'indigo' ? 'text-indigo-500 group-hover:text-indigo-700'
+              : mode.accent === 'emerald' ? 'text-emerald-500 group-hover:text-emerald-700'
+              : 'text-violet-500 group-hover:text-violet-700'
             return (
               <Link
                 key={mode.id}
                 to={mode.href}
-                className={`group relative flex flex-col p-6 rounded-2xl border bg-white/[0.02] hover:bg-white/[0.035] transition-all duration-300 ${mode.cardBorder}`}
+                className="group flex flex-col p-6 rounded-2xl bg-white border border-[#E8E8EF] hover:border-indigo-100 hover:shadow-xl hover:shadow-indigo-50/60 transition-all duration-300"
               >
-                <div className={`absolute top-0 inset-x-8 h-px bg-gradient-to-r ${mode.topLine}`} />
-
                 <div className="flex items-start justify-between mb-5">
-                  <span className="text-[11px] font-mono text-[#3A3A50] tracking-wider">{mode.tag}</span>
-                  <div className={`p-2.5 rounded-xl ${mode.iconBg}`}>
-                    <Icon size={17} className={mode.color} />
+                  <span className="text-[10px] font-mono text-[#CACAD4] tracking-widest">{mode.tag}</span>
+                  <div className={`w-9 h-9 rounded-xl bg-gradient-to-br ${grad} flex items-center justify-center shadow-sm`}>
+                    <Icon size={17} className="text-white" />
                   </div>
                 </div>
-
-                <div className="mb-4">
-                  <h3 className="text-2xl font-bold text-white tracking-tight mb-1">{mode.title}</h3>
-                  <p className={`text-xs font-medium ${mode.color} opacity-70`}>{mode.subtitle}</p>
-                </div>
-
-                <p className="text-sm text-[#6B6B85] leading-relaxed mb-5 flex-1">{mode.description}</p>
-
+                <h3 className="text-2xl font-bold text-[#111827] tracking-tight">{mode.title}</h3>
+                <p className={`text-xs font-medium mt-0.5 mb-3 ${mode.accent === 'indigo' ? 'text-indigo-500' : mode.accent === 'emerald' ? 'text-emerald-500' : 'text-violet-500'}`}>
+                  {mode.subtitle}
+                </p>
+                <p className="text-sm text-[#6B7280] leading-relaxed mb-5 flex-1">{mode.description}</p>
                 <ul className="space-y-1.5 mb-5">
                   {mode.features.map((f) => (
-                    <li key={f} className="flex items-center gap-2 text-xs text-[#4A4A5A]">
-                      <span className={`w-1 h-1 rounded-full shrink-0 ${mode.dotColor}`} />
+                    <li key={f} className="flex items-center gap-2 text-xs text-[#9CA3AF]">
+                      <span className={`w-1 h-1 rounded-full flex-shrink-0 ${mode.dot}`} />
                       {f}
                     </li>
                   ))}
                 </ul>
-
-                <div className={`flex items-center gap-1.5 text-xs ${mode.color} opacity-50 group-hover:opacity-100 transition-opacity font-medium`}>
+                <div className={`flex items-center gap-1.5 text-xs font-semibold transition-colors ${textColor}`}>
                   Open {mode.title}
                   <ArrowRight size={11} className="group-hover:translate-x-0.5 transition-transform" />
                 </div>
@@ -160,38 +158,30 @@ export default function Landing() {
         </div>
       </section>
 
-      {/* Stats + unified AI layer */}
-      <section className="px-6 lg:px-10 pb-20 max-w-[1100px] mx-auto">
-        <div className="grid grid-cols-2 lg:grid-cols-[1fr_1fr_1fr_2.2fr] gap-3">
-          {stats.map(({ value, label }) => (
-            <div key={label} className="p-5 rounded-2xl border border-white/[0.06] bg-white/[0.02]">
-              <p className="text-3xl font-bold text-white mb-1 tracking-tight">{value}</p>
-              <p className="text-xs text-[#6B6B85]">{label}</p>
+      {/* ── AI layer ─────────────────────────────────────────── */}
+      <section className="px-6 lg:px-12 pb-20 max-w-[1200px] mx-auto">
+        <div className="p-8 rounded-3xl bg-gradient-to-br from-indigo-50 via-white to-violet-50 border border-indigo-100">
+          <div className="flex items-center gap-3 mb-6">
+            <div className="w-8 h-8 rounded-xl bg-indigo-600 flex items-center justify-center">
+              <Zap size={14} className="text-white" />
             </div>
-          ))}
-
-          <div className="col-span-2 lg:col-span-1 p-5 rounded-2xl border border-white/[0.06] bg-white/[0.02]">
-            <div className="flex items-center gap-2 mb-3">
-              <div className="w-5 h-5 rounded-md bg-amber-500/15 flex items-center justify-center">
-                <Zap size={11} className="text-amber-400" />
-              </div>
-              <span className="text-xs font-semibold text-white tracking-wide">Unified AI layer</span>
+            <div>
+              <h3 className="text-base font-bold text-[#111827]">Unified AI layer</h3>
+              <p className="text-xs text-[#9CA3AF]">One intelligence core powering all three modes simultaneously</p>
             </div>
-            <p className="text-xs text-[#6B6B85] leading-relaxed mb-4">
-              Reasoning, knowledge, and tools — one intelligence core powering all three modes simultaneously.
-            </p>
-            <div className="flex flex-wrap gap-2">
-              {pillars.map(({ icon: PIcon, label, desc }) => (
-                <div
-                  key={label}
-                  title={desc}
-                  className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-white/[0.04] border border-white/[0.06]"
-                >
-                  <PIcon size={11} className="text-[#8888AA]" />
-                  <span className="text-[11px] text-[#8888AA] font-medium">{label}</span>
+          </div>
+          <div className="grid sm:grid-cols-3 gap-4">
+            {pillars.map(({ icon: PIcon, label, desc, color, bg }) => (
+              <div key={label} className="flex items-center gap-3 p-4 rounded-2xl bg-white border border-[#E8E8EF] shadow-sm">
+                <div className={`w-9 h-9 rounded-xl ${bg} flex items-center justify-center flex-shrink-0`}>
+                  <PIcon size={16} className={color} />
                 </div>
-              ))}
-            </div>
+                <div>
+                  <p className="text-sm font-semibold text-[#111827]">{label}</p>
+                  <p className="text-xs text-[#9CA3AF]">{desc}</p>
+                </div>
+              </div>
+            ))}
           </div>
         </div>
       </section>
