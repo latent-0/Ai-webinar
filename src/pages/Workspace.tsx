@@ -71,18 +71,17 @@ const QUICK_LAYOUTS = [
 // ─── Canvas constants ─────────────────────────────────────────────────────────
 
 const BASE_NODES: NodeDef[] = [
-  { id: 'brief',    x: 60,  y: 60,  w: 165, h: 115, title: 'Brief',    tag: '#creative-brief',  color: 'indigo',  icon: FileText,      preview: 'text',    badge: null  },
-  { id: 'insight',  x: 300, y: 60,  w: 165, h: 115, title: 'Insight',  tag: '#research',         color: 'violet',  icon: Sparkles,      preview: 'metric',  badge: null  },
-  { id: 'concept',  x: 540, y: 60,  w: 165, h: 115, title: 'Concept',  tag: '#ideation',         color: 'emerald', icon: Lightbulb,     preview: 'images',  badge: 'AI'  },
+  { id: 'insight',  x: 60,  y: 60,  w: 165, h: 115, title: 'Insight',  tag: '#research',         color: 'violet',  icon: Sparkles,      preview: 'metric',  badge: null  },
+  { id: 'concept',  x: 300, y: 60,  w: 165, h: 115, title: 'Concept',  tag: '#ideation',         color: 'emerald', icon: Lightbulb,     preview: 'images',  badge: 'AI'  },
   { id: 'prompt',   x: 60,  y: 265, w: 165, h: 115, title: 'Prompt',   tag: '#prompt-v1',        color: 'indigo',  icon: MessageSquare, preview: 'text2',   badge: 'v2'  },
   { id: 'generate', x: 300, y: 265, w: 165, h: 115, title: 'Generate', tag: '#midjourney',       color: 'violet',  icon: Zap,           preview: 'images2', badge: null  },
   { id: 'output',   x: 540, y: 265, w: 165, h: 115, title: 'Output',   tag: '#campaign-assets',  color: 'emerald', icon: Package,       preview: 'image3',  badge: null  },
 ]
 
 const BASE_EDGES = [
-  { from: 'brief', to: 'insight' }, { from: 'insight', to: 'concept' },
+  { from: 'insight', to: 'concept' },
   { from: 'prompt', to: 'generate' }, { from: 'generate', to: 'output' },
-  { from: 'brief', to: 'prompt' }, { from: 'insight', to: 'generate' }, { from: 'concept', to: 'output' },
+  { from: 'insight', to: 'generate' }, { from: 'concept', to: 'output' },
 ]
 
 const INIT_CHAT: ChatMsg[] = [
