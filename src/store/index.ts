@@ -21,6 +21,7 @@ interface AppState {
   playMessages: Message[]
   liveAiMessages: Message[]
   displayName: string
+  liveAiModel: string
 
   addRoom: (room: Room) => void
   removeRoom: (id: string) => void
@@ -28,6 +29,7 @@ interface AppState {
   addPlayMessage: (msg: Message) => void
   addLiveAiMessage: (msg: Message) => void
   setDisplayName: (name: string) => void
+  setLiveAiModel: (model: string) => void
 }
 
 export const useAppStore = create<AppState>((set) => ({
@@ -40,6 +42,7 @@ export const useAppStore = create<AppState>((set) => ({
   playMessages: [],
   liveAiMessages: [],
   displayName: 'Guest',
+  liveAiModel: 'gemini-2.5-flash',
 
   addRoom: (room) => set((s) => ({ rooms: [room, ...s.rooms] })),
   removeRoom: (id) => set((s) => ({ rooms: s.rooms.filter((r) => r.id !== id) })),
@@ -47,4 +50,5 @@ export const useAppStore = create<AppState>((set) => ({
   addPlayMessage: (msg) => set((s) => ({ playMessages: [...s.playMessages, msg] })),
   addLiveAiMessage: (msg) => set((s) => ({ liveAiMessages: [...s.liveAiMessages, msg] })),
   setDisplayName: (name) => set({ displayName: name }),
+  setLiveAiModel: (model) => set({ liveAiModel: model }),
 }))

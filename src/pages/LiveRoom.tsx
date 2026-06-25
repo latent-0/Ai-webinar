@@ -3,6 +3,7 @@ import { useParams, useNavigate } from '@tanstack/react-router'
 import { X, Brain, Send, ChevronRight, Users, ExternalLink } from 'lucide-react'
 import { useAppStore } from '../store'
 import { askGemini } from '../lib/gemini'
+import { askClaude } from '../lib/claude'
 
 declare global {
   interface Window {
@@ -17,7 +18,7 @@ declare global {
 export default function LiveRoom() {
   const { roomId } = useParams({ from: '/live/$roomId' })
   const navigate = useNavigate()
-  const { displayName, liveAiMessages, addLiveAiMessage } = useAppStore()
+  const { displayName, liveAiMessages, addLiveAiMessage, liveAiModel } = useAppStore()
 
   const [question, setQuestion] = useState('')
   const [aiLoading, setAiLoading] = useState(false)
@@ -80,7 +81,10 @@ export default function LiveRoom() {
     addLiveAiMessage({ id: Date.now().toString(), role: 'user', content: q, timestamp: new Date() })
     setAiLoading(true)
     try {
-      const answer = await askGemini(q, `Live webinar session: ${roomId}`)
+      const context = `Live webinar session: ${roomId}`
+      const answer = liveAiModel.startsWith('claude-')
+        ? await askClaude(q, context, liveAiModel)
+        : await askGemini(q, context)
       addLiveAiMessage({ id: (Date.now() + 1).toString(), role: 'assistant', content: answer, timestamp: new Date() })
     } catch {
       addLiveAiMessage({ id: (Date.now() + 1).toString(), role: 'assistant', content: 'Unable to process at this time.', timestamp: new Date() })

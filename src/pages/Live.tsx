@@ -1,16 +1,26 @@
 import { useState } from 'react'
 import { Link, useNavigate } from '@tanstack/react-router'
-import { Radio, Plus, Users, Clock, ArrowRight, Copy, Check } from 'lucide-react'
+import { Radio, Plus, Users, Clock, ArrowRight, Copy, Check, ChevronDown, Brain } from 'lucide-react'
 import { useAppStore } from '../store'
 import { generateRoomId, formatDate } from '../lib/utils'
 
+const AI_PROVIDERS = [
+  { id: 'gemini-2.5-flash', label: 'Gemini 2.5 Flash', provider: 'Google', badge: 'Default' },
+  { id: 'claude-opus-4-8', label: 'Claude Opus 4.8', provider: 'Anthropic', badge: 'Most Capable' },
+  { id: 'claude-sonnet-4-6', label: 'Claude Sonnet 4.6', provider: 'Anthropic', badge: 'Balanced' },
+  { id: 'claude-haiku-4-5-20251001', label: 'Claude Haiku 4.5', provider: 'Anthropic', badge: 'Fast' },
+]
+
 export default function Live() {
   const navigate = useNavigate()
-  const { rooms, addRoom, displayName, setDisplayName } = useAppStore()
+  const { rooms, addRoom, displayName, setDisplayName, liveAiModel, setLiveAiModel } = useAppStore()
   const [newRoomName, setNewRoomName] = useState('')
   const [joinId, setJoinId] = useState('')
   const [name, setName] = useState(displayName)
   const [copiedId, setCopiedId] = useState<string | null>(null)
+  const [modelOpen, setModelOpen] = useState(false)
+
+  const selectedModel = AI_PROVIDERS.find((m) => m.id === liveAiModel) ?? AI_PROVIDERS[0]
 
   function handleCreate(e: React.FormEvent) {
     e.preventDefault()
@@ -65,6 +75,41 @@ export default function Live() {
               placeholder="Session title..."
               className="w-full px-3 py-2.5 rounded-lg bg-[#F7F7FA] border border-[#E8E8EF] text-sm text-[#111827] placeholder-[#9CA3AF] focus:outline-none focus:border-indigo-400"
             />
+
+            {/* AI Model selector */}
+            <div className="relative">
+              <button
+                type="button"
+                onClick={() => setModelOpen((v) => !v)}
+                className="w-full flex items-center justify-between px-3 py-2.5 rounded-lg bg-[#F7F7FA] border border-[#E8E8EF] text-sm text-[#111827] hover:border-indigo-300 transition-colors"
+              >
+                <div className="flex items-center gap-2">
+                  <Brain size={14} className="text-indigo-500 shrink-0" />
+                  <span className="truncate">{selectedModel.label}</span>
+                  <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-indigo-50 text-indigo-600 font-medium shrink-0">{selectedModel.provider}</span>
+                </div>
+                <ChevronDown size={14} className={`text-[#9CA3AF] transition-transform ${modelOpen ? 'rotate-180' : ''}`} />
+              </button>
+              {modelOpen && (
+                <div className="absolute z-20 top-full mt-1 w-full bg-white border border-[#E8E8EF] rounded-xl shadow-lg overflow-hidden">
+                  {AI_PROVIDERS.map((m) => (
+                    <button
+                      key={m.id}
+                      type="button"
+                      onClick={() => { setLiveAiModel(m.id); setModelOpen(false) }}
+                      className={`w-full flex items-center justify-between px-3 py-2.5 text-left text-sm hover:bg-[#F7F7FA] transition-colors ${m.id === liveAiModel ? 'bg-indigo-50 text-indigo-700' : 'text-[#374151]'}`}
+                    >
+                      <span>{m.label}</span>
+                      <div className="flex items-center gap-1.5">
+                        <span className="text-[10px] text-[#9CA3AF]">{m.provider}</span>
+                        <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-medium ${m.id === liveAiModel ? 'bg-indigo-100 text-indigo-600' : 'bg-[#F0F0F5] text-[#6B7280]'}`}>{m.badge}</span>
+                      </div>
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+
             <button
               type="submit"
               disabled={!newRoomName.trim()}
