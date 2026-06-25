@@ -1,42 +1,80 @@
 import { Link } from '@tanstack/react-router'
-import { Radio, BookOpen, Gamepad2, ArrowRight, Brain, Database, Wrench, Sparkles, Zap, Users } from 'lucide-react'
+import { Radio, BookOpen, Gamepad2, ArrowRight, Brain, Zap, Sparkles, Target, Search, Wrench, Eye } from 'lucide-react'
 import ParticleHeadline from '../components/ParticleHeadline'
 
-const modes = [
+const START_OPTIONS = [
   {
-    id: 'live',  tag: '01', title: 'Live',  subtitle: 'Engage in real time',  icon: Radio,
-    accent: 'indigo', href: '/live',
-    description: 'Host webinars with AI-powered Q&A, live reactions, and intelligent audience engagement.',
-    features: ['AI synthesises questions', 'Real-time participant tracking', 'Live polls & reactions', 'Knowledge capture'],
+    icon: Radio,
+    label: 'Run a live session',
+    desc: 'Host a webinar or workshop with AI-assisted notes, chat and transcript.',
+    href: '/live',
+    color: 'indigo',
+    iconBg: 'bg-indigo-100', iconColor: 'text-indigo-600',
+    border: 'border-indigo-200 hover:border-indigo-400', bg: 'hover:bg-indigo-50/40',
+  },
+  {
+    icon: Target,
+    label: 'Build a creative workflow',
+    desc: 'Use the Sandbox blocks — Goal, Inputs, Insight, Ideas, Make, Present.',
+    href: '/live/sandbox-demo',
+    color: 'violet',
+    iconBg: 'bg-violet-100', iconColor: 'text-violet-600',
+    border: 'border-violet-200 hover:border-violet-400', bg: 'hover:bg-violet-50/40',
+  },
+  {
+    icon: Search,
+    label: 'Research a topic',
+    desc: 'Deep-dive into AI, auditing, law, dentistry, marketing and more.',
+    href: '/learn',
+    color: 'emerald',
+    iconBg: 'bg-emerald-100', iconColor: 'text-emerald-600',
+    border: 'border-emerald-200 hover:border-emerald-400', bg: 'hover:bg-emerald-50/40',
+  },
+  {
+    icon: Wrench,
+    label: 'Test an AI tool',
+    desc: 'Experiment with prompts, models, and creative scenarios step by step.',
+    href: '/play',
+    color: 'amber',
+    iconBg: 'bg-amber-100', iconColor: 'text-amber-600',
+    border: 'border-amber-200 hover:border-amber-400', bg: 'hover:bg-amber-50/40',
+  },
+  {
+    icon: Eye,
+    label: 'Review a session',
+    desc: 'Browse past sessions, replay transcripts, and extract key decisions.',
+    href: '/live',
+    color: 'rose',
+    iconBg: 'bg-rose-100', iconColor: 'text-rose-600',
+    border: 'border-rose-200 hover:border-rose-400', bg: 'hover:bg-rose-50/40',
+  },
+  {
+    icon: Sparkles,
+    label: 'Explore the Sandbox',
+    desc: 'Jump straight into an open workspace and start building from scratch.',
+    href: '/live/open-sandbox',
+    color: 'sky',
+    iconBg: 'bg-sky-100', iconColor: 'text-sky-600',
+    border: 'border-sky-200 hover:border-sky-400', bg: 'hover:bg-sky-50/40',
+  },
+]
+
+const MODES = [
+  {
+    tag: '01', title: 'Live', subtitle: 'Engage in real time', icon: Radio, href: '/live',
+    accent: 'indigo', desc: 'Host webinars and workshops with AI-assisted Q&A, notes, transcript and live chat.',
     dot: 'bg-indigo-500',
   },
   {
-    id: 'learn', tag: '02', title: 'Learn', subtitle: 'Build deep knowledge', icon: BookOpen,
-    accent: 'emerald', href: '/learn',
-    description: 'RAG-powered knowledge hub with domain-specific AI. Expert-level depth on demand.',
-    features: ['6 curated knowledge bases', 'AI learning paths', 'Structured Q&A', 'Session memory'],
+    tag: '02', title: 'Learn', subtitle: 'Build deep knowledge', icon: BookOpen, href: '/learn',
+    accent: 'emerald', desc: 'Domain-specific AI with curated knowledge bases across six expert fields.',
     dot: 'bg-emerald-500',
   },
   {
-    id: 'play',  tag: '03', title: 'Play',  subtitle: 'Experiment & discover', icon: Gamepad2,
-    accent: 'violet', href: '/play',
-    description: 'A sandbox for hands-on tool exploration with an always-on AI mentor. Learn by doing.',
-    features: ['6 integrated tools', 'Step-by-step guidance', 'Real-world scenarios', 'Creative workflows'],
+    tag: '03', title: 'Play', subtitle: 'Experiment & discover', icon: Gamepad2, href: '/play',
+    accent: 'violet', desc: 'AI mentor for hands-on tool exploration. Learn by doing, step by step.',
     dot: 'bg-violet-500',
   },
-]
-
-const stats = [
-  { value: '3',  label: 'Core modes',        sub: 'Live · Learn · Play'        },
-  { value: '6',  label: 'Knowledge domains', sub: 'Dental to digital marketing' },
-  { value: '6',  label: 'Integrated tools',  sub: 'Pro-grade sandbox'           },
-  { value: '∞',  label: 'AI context',        sub: 'Persistent session memory'   },
-]
-
-const pillars = [
-  { icon: Brain,    label: 'Reasoning', desc: 'Thinks before answering',  color: 'text-indigo-600',  bg: 'bg-indigo-50'  },
-  { icon: Database, label: 'Knowledge', desc: 'RAG across all domains',   color: 'text-emerald-600', bg: 'bg-emerald-50' },
-  { icon: Wrench,   label: 'Tools',     desc: 'Real software, real tasks', color: 'text-violet-600',  bg: 'bg-violet-50'  },
 ]
 
 export default function Landing() {
@@ -44,8 +82,8 @@ export default function Landing() {
     <div className="bg-white min-h-screen">
 
       {/* ── Hero ─────────────────────────────────────────────── */}
-      <section className="px-6 lg:px-12 pt-16 pb-10 max-w-[1200px] mx-auto">
-        <div className="flex items-center gap-2 mb-8">
+      <section className="px-6 lg:px-12 pt-16 pb-12 max-w-[1200px] mx-auto">
+        <div className="flex items-center gap-2 mb-10">
           <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-indigo-50 border border-indigo-100">
             <span className="relative flex h-1.5 w-1.5">
               <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-60" />
@@ -53,82 +91,55 @@ export default function Landing() {
             </span>
             <span className="text-xs text-indigo-700 font-medium">Platform live</span>
           </div>
-          <span className="hidden sm:flex items-center gap-1.5 text-xs text-[#9CA3AF]">
-            <Sparkles size={10} />
-            AI-powered webinars · learning · tool sandbox
-          </span>
         </div>
 
-        <div className="grid lg:grid-cols-[1fr_360px] gap-12 items-center">
-          <div>
-            <ParticleHeadline />
-            <p className="text-lg text-[#6B7280] max-w-[420px] leading-relaxed mt-6 mb-8">
-              Agentic AI that listens, learns, and responds — delivering a personalised intelligence layer to every participant.
-            </p>
-            <div className="flex flex-wrap gap-3">
-              <Link to="/live" className="group flex items-center gap-2 px-5 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-semibold text-sm transition-all hover:shadow-lg hover:shadow-indigo-200 hover:-translate-y-px">
-                Start a session
-                <ArrowRight size={15} className="group-hover:translate-x-0.5 transition-transform" />
-              </Link>
-              <Link to="/learn" className="flex items-center gap-1.5 px-5 py-2.5 rounded-xl border border-[#E5E7EB] text-[#374151] hover:bg-gray-50 font-medium text-sm transition-colors">
-                Explore knowledge hub
-              </Link>
-            </div>
-          </div>
+        <div className="max-w-[720px] mb-12">
+          <ParticleHeadline />
+          <p className="text-lg text-[#6B7280] leading-relaxed mt-6">
+            A live AI Sandbox where teams learn, build and create together.
+          </p>
+        </div>
 
-          {/* Mini bento preview */}
-          <div className="hidden lg:grid grid-cols-2 gap-3">
-            {[
-              { label: 'Live Session',  sub: '128 participants', color: 'bg-indigo-600',  icon: Radio     },
-              { label: 'AI Notes',      sub: '5 key takeaways',  color: 'bg-emerald-600', icon: Brain     },
-              { label: 'Playground',    sub: 'API running',       color: 'bg-violet-600',  icon: Zap       },
-              { label: 'Participants',  sub: '128 online',        color: 'bg-amber-500',   icon: Users     },
-            ].map(({ label, sub, color, icon: Icon }) => (
-              <div key={label} className="p-4 rounded-2xl bg-white border border-[#E8E8EF] shadow-sm hover:shadow-md transition-shadow">
-                <div className={`w-8 h-8 rounded-xl ${color} flex items-center justify-center mb-3`}>
-                  <Icon size={14} className="text-white" />
+        {/* Start question */}
+        <div className="mb-3">
+          <p className="text-sm font-semibold text-[#374151]">What do you want to do in the Sandbox?</p>
+        </div>
+        <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-3 max-w-[900px]">
+          {START_OPTIONS.map((opt) => {
+            const Icon = opt.icon
+            return (
+              <Link key={opt.label} to={opt.href}
+                className={`group flex items-start gap-4 p-4 rounded-2xl border bg-white transition-all duration-200 hover:shadow-md hover:-translate-y-0.5 ${opt.border} ${opt.bg}`}>
+                <div className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 transition-transform group-hover:scale-110 ${opt.iconBg}`}>
+                  <Icon size={17} className={opt.iconColor} />
                 </div>
-                <p className="text-sm font-semibold text-[#111827]">{label}</p>
-                <p className="text-xs text-[#9CA3AF] mt-0.5">{sub}</p>
-              </div>
-            ))}
-          </div>
+                <div className="min-w-0">
+                  <p className="text-sm font-semibold text-[#111827] leading-tight mb-1">{opt.label}</p>
+                  <p className="text-xs text-[#9CA3AF] leading-relaxed">{opt.desc}</p>
+                </div>
+              </Link>
+            )
+          })}
         </div>
       </section>
 
       <div className="border-t border-[#F0F0F5]" />
 
-      {/* ── Stats ────────────────────────────────────────────── */}
-      <section className="px-6 lg:px-12 py-8 max-w-[1200px] mx-auto">
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-          {stats.map(({ value, label, sub }) => (
-            <div key={label} className="p-5 rounded-2xl bg-[#FAFAFA] border border-[#F0F0F5]">
-              <p className="text-3xl font-bold text-[#111827] tracking-tight">{value}</p>
-              <p className="text-sm font-semibold text-[#374151] mt-1">{label}</p>
-              <p className="text-xs text-[#9CA3AF] mt-0.5">{sub}</p>
-            </div>
-          ))}
-        </div>
-      </section>
-
-      {/* ── Mode cards ───────────────────────────────────────── */}
-      <section className="px-6 lg:px-12 pb-12 max-w-[1200px] mx-auto">
-        <p className="text-xs font-semibold text-[#9CA3AF] uppercase tracking-wider mb-5">Three modes, one platform</p>
+      {/* ── Modes ─────────────────────────────────────────────── */}
+      <section className="px-6 lg:px-12 py-12 max-w-[1200px] mx-auto">
+        <p className="text-xs font-semibold text-[#9CA3AF] uppercase tracking-wider mb-6">Three modes, one platform</p>
         <div className="grid lg:grid-cols-3 gap-4">
-          {modes.map((mode) => {
+          {MODES.map((mode) => {
             const Icon = mode.icon
             const grad = mode.accent === 'indigo' ? 'from-indigo-500 to-indigo-600'
               : mode.accent === 'emerald' ? 'from-emerald-500 to-emerald-600'
               : 'from-violet-500 to-violet-600'
-            const textColor = mode.accent === 'indigo' ? 'text-indigo-500 group-hover:text-indigo-700'
+            const linkColor = mode.accent === 'indigo' ? 'text-indigo-500 group-hover:text-indigo-700'
               : mode.accent === 'emerald' ? 'text-emerald-500 group-hover:text-emerald-700'
               : 'text-violet-500 group-hover:text-violet-700'
             return (
-              <Link
-                key={mode.id}
-                to={mode.href}
-                className="group flex flex-col p-6 rounded-2xl bg-white border border-[#E8E8EF] hover:border-indigo-100 hover:shadow-xl hover:shadow-indigo-50/60 transition-all duration-300"
-              >
+              <Link key={mode.tag} to={mode.href}
+                className="group flex flex-col p-6 rounded-2xl bg-white border border-[#E8E8EF] hover:border-indigo-100 hover:shadow-xl hover:shadow-indigo-50/60 transition-all duration-300">
                 <div className="flex items-start justify-between mb-5">
                   <span className="text-[10px] font-mono text-[#CACAD4] tracking-widest">{mode.tag}</span>
                   <div className={`w-9 h-9 rounded-xl bg-gradient-to-br ${grad} flex items-center justify-center shadow-sm`}>
@@ -136,19 +147,11 @@ export default function Landing() {
                   </div>
                 </div>
                 <h3 className="text-2xl font-bold text-[#111827] tracking-tight">{mode.title}</h3>
-                <p className={`text-xs font-medium mt-0.5 mb-3 ${mode.accent === 'indigo' ? 'text-indigo-500' : mode.accent === 'emerald' ? 'text-emerald-500' : 'text-violet-500'}`}>
+                <p className={`text-xs font-medium mt-0.5 mb-4 ${mode.accent === 'indigo' ? 'text-indigo-500' : mode.accent === 'emerald' ? 'text-emerald-500' : 'text-violet-500'}`}>
                   {mode.subtitle}
                 </p>
-                <p className="text-sm text-[#6B7280] leading-relaxed mb-5 flex-1">{mode.description}</p>
-                <ul className="space-y-1.5 mb-5">
-                  {mode.features.map((f) => (
-                    <li key={f} className="flex items-center gap-2 text-xs text-[#9CA3AF]">
-                      <span className={`w-1 h-1 rounded-full flex-shrink-0 ${mode.dot}`} />
-                      {f}
-                    </li>
-                  ))}
-                </ul>
-                <div className={`flex items-center gap-1.5 text-xs font-semibold transition-colors ${textColor}`}>
+                <p className="text-sm text-[#6B7280] leading-relaxed flex-1">{mode.desc}</p>
+                <div className={`flex items-center gap-1.5 text-xs font-semibold mt-5 transition-colors ${linkColor}`}>
                   Open {mode.title}
                   <ArrowRight size={11} className="group-hover:translate-x-0.5 transition-transform" />
                 </div>
@@ -162,7 +165,7 @@ export default function Landing() {
       <section className="px-6 lg:px-12 pb-20 max-w-[1200px] mx-auto">
         <div className="p-8 rounded-3xl bg-gradient-to-br from-indigo-50 via-white to-violet-50 border border-indigo-100">
           <div className="flex items-center gap-3 mb-6">
-            <div className="w-8 h-8 rounded-xl bg-indigo-600 flex items-center justify-center">
+            <div className="w-8 h-8 rounded-xl bg-[#111827] flex items-center justify-center">
               <Zap size={14} className="text-white" />
             </div>
             <div>
@@ -171,7 +174,11 @@ export default function Landing() {
             </div>
           </div>
           <div className="grid sm:grid-cols-3 gap-4">
-            {pillars.map(({ icon: PIcon, label, desc, color, bg }) => (
+            {[
+              { icon: Brain,    label: 'Reasoning', desc: 'Thinks before answering',  color: 'text-indigo-600',  bg: 'bg-indigo-50'  },
+              { icon: Sparkles, label: 'Synthesis',  desc: 'Connects ideas in real time', color: 'text-violet-600',  bg: 'bg-violet-50'  },
+              { icon: Target,   label: 'Context',   desc: 'Stays focused on your goal', color: 'text-emerald-600', bg: 'bg-emerald-50' },
+            ].map(({ icon: PIcon, label, desc, color, bg }) => (
               <div key={label} className="flex items-center gap-3 p-4 rounded-2xl bg-white border border-[#E8E8EF] shadow-sm">
                 <div className={`w-9 h-9 rounded-xl ${bg} flex items-center justify-center flex-shrink-0`}>
                   <PIcon size={16} className={color} />
