@@ -11,6 +11,8 @@ import {
 } from 'lucide-react'
 import { useAppStore } from '../store'
 import { askGemini } from '../lib/gemini'
+import { askClaude, CLAUDE_MODELS } from '../lib/claude'
+import { transcribeAudio } from '../lib/elevenlabs'
 
 declare global {
   interface Window {
@@ -133,7 +135,7 @@ export default function Workspace() {
   const [activeNav, setActiveNav]         = useState<'live'|'learn'|'play'>('live')
   const [activeLayout, setActiveLayout]   = useState('canvas')
   const [activeLearnTab, setLearnTab]     = useState<'notes'|'transcript'|'sources'>('notes')
-  const [activePlayTab, setPlayTab]       = useState<'api'|'prompts'|'models'|'tools'>('api')
+  const [activePlayTab, setPlayTab]       = useState<'prompts'|'models'|'tools'>('prompts')
   const [activeTool, setActiveTool]       = useState<'select'|'text'|'shape'|'play'>('select')
   const [snapOn, setSnapOn]               = useState(true)
   const [showGrid, setShowGrid]           = useState(true)
@@ -152,9 +154,6 @@ export default function Workspace() {
   const [learnMsgs, setLearnMsgs]         = useState<LearnMsg[]>([])
   const [learnInput, setLearnInput]       = useState('')
   const [learnLoading, setLearnLoading]   = useState(false)
-  const [apiBody, setApiBody]             = useState('{\n  "prompt": "Futuristic race car, motion blur, cinematic",\n  "style": "cinematic",\n  "ar": "16:9"\n}')
-  const [apiLoading, setApiLoading]       = useState(false)
-  const [apiResponse, setApiResponse]     = useState<string|null>(null)
   const [mix, setMix]                     = useState({ live: 60, learn: 20, play: 20 })
 
   // ── Canvas nodes (base + user-added) ────────────────────────────────────────
@@ -194,6 +193,9 @@ export default function Workspace() {
   // ── Transcript / Sources ──────────────────────────────────────────────────────
   const [transcript, setTranscript]       = useState<string|null>(null)
   const [transcriptLoading, setTranscriptLoading] = useState(false)
+  const [isRecording, setIsRecording]     = useState(false)
+  const mediaRecorderRef = useRef<MediaRecorder | null>(null)
+  const audioChunksRef   = useRef<Blob[]>([])
   const [sources] = useState([
     { title: 'AI Workflow Design Patterns', url: '#', domain: 'arxiv.org' },
     { title: 'Prompt Engineering Guide', url: '#', domain: 'promptingguide.ai' },
@@ -209,9 +211,9 @@ export default function Workspace() {
     { label: 'Sci-fi landscape', prompt: 'Epic sci-fi landscape, distant planets, alien flora, volumetric fog, concept art style' },
   ]
   const MODELS = [
-    { id: 'gemini-2.5-flash', label: 'Gemini 2.5 Flash', badge: 'Fast', active: true },
-    { id: 'gemini-2.5-pro', label: 'Gemini 2.5 Pro', badge: 'Smart', active: false },
-    { id: 'gemini-2.0-flash', label: 'Gemini 2.0 Flash', badge: 'Stable', active: false },
+    { id: 'gemini-2.5-flash', label: 'Gemini 2.5 Flash', badge: 'Fast', provider: 'Google' },
+    { id: 'gemini-2.5-pro',   label: 'Gemini 2.5 Pro',   badge: 'Smart', provider: 'Google' },
+    ...CLAUDE_MODELS.map(m => ({ id: m.id, label: m.label, badge: m.badge, provider: 'Anthropic' })),
   ]
   const [activeModel, setActiveModel]     = useState('gemini-2.5-flash')
   const TOOLS_LIST = [
@@ -365,6 +367,11 @@ export default function Workspace() {
     setCanvasExpanded(false)
   }
 
+  async function callAI(prompt: string, context: string): Promise<string> {
+    if (activeModel.startsWith('claude-')) return askClaude(prompt, context, activeModel)
+    return askGemini(prompt, context)
+  }
+
   const sendChat = useCallback(async (e: React.FormEvent) => {
     e.preventDefault()
     if (!chatInput.trim() || chatLoading) return
@@ -373,10 +380,10 @@ export default function Workspace() {
     setChatMsgs(m => [...m, { id:Date.now().toString(), user:displayName||'You', avatar:(displayName||'Y')[0].toUpperCase(), time:now, content:text }])
     setChatLoading(true)
     try {
-      const reply = await askGemini(text, 'You are a helpful assistant in a live webinar. Be concise.')
+      const reply = await callAI(text, 'You are a helpful assistant in a live webinar. Be concise.')
       setChatMsgs(m => [...m, { id:(Date.now()+1).toString(), user:'AI', avatar:'AI', time:new Date().toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'}), content:reply }])
     } finally { setChatLoading(false) }
-  }, [chatInput, chatLoading, displayName])
+  }, [chatInput, chatLoading, displayName, activeModel]) // eslint-disable-line react-hooks/exhaustive-deps
 
   const sendLearn = useCallback(async (e: React.FormEvent) => {
     e.preventDefault()
@@ -385,21 +392,10 @@ export default function Workspace() {
     setLearnMsgs(m => [...m, { id:Date.now().toString(), role:'user', content:q }])
     setLearnLoading(true)
     try {
-      const ans = await askGemini(q, 'You are an expert AI learning assistant. Give concise, insightful answers.')
+      const ans = await callAI(q, 'You are an expert AI learning assistant. Give concise, insightful answers.')
       setLearnMsgs(m => [...m, { id:(Date.now()+1).toString(), role:'assistant', content:ans }])
     } finally { setLearnLoading(false) }
-  }, [learnInput, learnLoading])
-
-  const sendPlayground = useCallback(async () => {
-    if (apiLoading) return
-    setApiLoading(true); setApiResponse(null)
-    try {
-      let prompt = 'Generate creative content'
-      try { const p = JSON.parse(apiBody); if (p.prompt) prompt = p.prompt } catch {}
-      const resp = await askGemini(prompt, 'You are a creative AI model. Generate vivid, descriptive creative content based on the prompt.')
-      setApiResponse(resp)
-    } finally { setApiLoading(false) }
-  }, [apiBody, apiLoading])
+  }, [learnInput, learnLoading, activeModel]) // eslint-disable-line react-hooks/exhaustive-deps
 
   function fitView() {
     setZoom(100)
@@ -435,17 +431,39 @@ export default function Workspace() {
     navigate({ to: '/live' })
   }
 
-  async function generateTranscript() {
-    if (transcriptLoading) return
-    setTranscriptLoading(true)
+  async function startRecording() {
     try {
-      const t = await askGemini(
-        `Generate a realistic 5-minute webinar transcript excerpt for room "${roomId}". Include speaker names (Host, Sophie, Alex), timestamps, and natural conversation about AI creative workflows.`,
-        'You are a transcript generator. Output clean, realistic transcript text with timestamps in [MM:SS] format.'
-      )
-      setTranscript(t)
-    } finally {
-      setTranscriptLoading(false)
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true })
+      audioChunksRef.current = []
+      const recorder = new MediaRecorder(stream)
+      recorder.ondataavailable = (e) => { if (e.data.size > 0) audioChunksRef.current.push(e.data) }
+      recorder.onstop = async () => {
+        stream.getTracks().forEach(t => t.stop())
+        const blob = new Blob(audioChunksRef.current, { type: 'audio/webm' })
+        setTranscriptLoading(true)
+        try {
+          const text = await transcribeAudio(blob)
+          setTranscript(prev => prev ? `${prev}\n\n${text}` : text)
+        } catch (err) {
+          const msg = err instanceof Error ? err.message : String(err)
+          setTranscript(prev => prev ? `${prev}\n\n[Error: ${msg}]` : `[Error: ${msg}]`)
+        } finally {
+          setTranscriptLoading(false)
+        }
+      }
+      mediaRecorderRef.current = recorder
+      recorder.start()
+      setIsRecording(true)
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err)
+      alert(`Microphone access error: ${msg}`)
+    }
+  }
+
+  function stopRecording() {
+    if (mediaRecorderRef.current?.state === 'recording') {
+      mediaRecorderRef.current.stop()
+      setIsRecording(false)
     }
   }
 
@@ -552,17 +570,6 @@ export default function Workspace() {
         </div>
       )}
 
-      {/* ── Layout presets (hidden in focus mode) ─────────────────────────────── */}
-      {!focusMode && (
-        <div className="h-11 border-b border-[#E8E8EF] flex items-center px-4 gap-1.5 overflow-x-auto shrink-0 bg-white">
-          {LAYOUTS.map((l) => (
-            <button key={l.id} onClick={() => changeLayout(l.id)}
-              className={`flex-shrink-0 px-3.5 py-1.5 rounded-lg text-xs font-medium transition-all duration-200 ${activeLayout===l.id?'bg-indigo-600 text-white shadow-sm':'text-[#6B7280] hover:bg-[#F7F7FA] hover:text-[#374151]'}`}
-            >{l.label}</button>
-          ))}
-          <button className="flex-shrink-0 p-1.5 rounded-lg text-[#9CA3AF] hover:bg-[#F7F7FA] transition-colors ml-1"><MoreHorizontal size={14}/></button>
-        </div>
-      )}
 
       {/* ── Main ──────────────────────────────────────────────────────────────── */}
       <div className="flex flex-1 min-h-0">
@@ -882,20 +889,39 @@ export default function Workspace() {
                 <div className="overflow-y-auto flex-1 min-h-0 p-4 space-y-4">
                   {activeLearnTab==='transcript' && (
                     <div>
-                      {!transcript && !transcriptLoading && (
-                        <div className="text-center py-6">
-                          <p className="text-xs text-[#9CA3AF] mb-3">Auto-transcript from live session</p>
-                          <button onClick={generateTranscript}
-                            className="px-4 py-2 rounded-lg bg-indigo-50 hover:bg-indigo-100 text-indigo-600 text-xs font-medium transition-colors">
-                            <Sparkles size={10} className="inline mr-1"/>Generate Transcript
+                      <div className="flex items-center gap-2 mb-3">
+                        {!isRecording ? (
+                          <button onClick={startRecording}
+                            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-rose-50 hover:bg-rose-100 text-rose-600 text-xs font-medium transition-colors">
+                            <Mic size={11}/> Start Recording
                           </button>
+                        ) : (
+                          <button onClick={stopRecording}
+                            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-rose-500 hover:bg-rose-400 text-white text-xs font-medium transition-colors animate-pulse">
+                            <MicOff size={11}/> Stop & Transcribe
+                          </button>
+                        )}
+                        {transcript && !isRecording && (
+                          <button onClick={() => setTranscript(null)} className="text-xs text-[#9CA3AF] hover:text-[#6B7280] transition-colors">Clear</button>
+                        )}
+                      </div>
+                      {isRecording && (
+                        <div className="flex items-center gap-2 p-2.5 rounded-lg bg-rose-50 border border-rose-100 mb-3">
+                          <span className="w-2 h-2 rounded-full bg-rose-500 animate-pulse shrink-0"/>
+                          <p className="text-xs text-rose-600 font-medium">Recording… speak now</p>
                         </div>
                       )}
                       {transcriptLoading && (
-                        <div className="flex gap-1 p-3">{[0,150,300].map(d=><span key={d} className="w-1.5 h-1.5 bg-indigo-400 rounded-full animate-bounce" style={{animationDelay:`${d}ms`}}/>)}</div>
+                        <div className="flex items-center gap-2 p-2.5 mb-3">
+                          <div className="flex gap-1">{[0,150,300].map(d=><span key={d} className="w-1.5 h-1.5 bg-indigo-400 rounded-full animate-bounce" style={{animationDelay:`${d}ms`}}/>)}</div>
+                          <p className="text-xs text-[#9CA3AF]">Transcribing via ElevenLabs…</p>
+                        </div>
                       )}
                       {transcript && (
                         <div className="text-xs text-[#374151] leading-relaxed whitespace-pre-line font-mono">{transcript}</div>
+                      )}
+                      {!transcript && !isRecording && !transcriptLoading && (
+                        <p className="text-xs text-[#9CA3AF]">Press Start Recording to capture and transcribe audio via ElevenLabs.</p>
                       )}
                     </div>
                   )}
@@ -956,7 +982,7 @@ export default function Workspace() {
                   <button className="p-1 rounded hover:bg-[#F7F7FA] text-[#9CA3AF]"><MoreHorizontal size={13}/></button>
                 </div>
                 <div className="flex border-b border-[#E8E8EF] px-4 shrink-0">
-                  {(['api','prompts','models','tools'] as const).map(tab=>(
+                  {(['prompts','models','tools'] as const).map(tab=>(
                     <button key={tab} onClick={()=>setPlayTab(tab)}
                       className={`px-3 py-2 text-xs font-medium uppercase tracking-wide transition-colors relative ${activePlayTab===tab?'text-indigo-600':'text-[#9CA3AF] hover:text-[#6B7280]'}`}
                     >
@@ -965,42 +991,11 @@ export default function Workspace() {
                   ))}
                 </div>
                 <div className="flex-1 overflow-y-auto min-h-0 p-3 space-y-3">
-                  {activePlayTab==='api' ? (
-                    <>
-                      <div className="flex items-center gap-2">
-                        <span className="px-2 py-1 rounded bg-emerald-100 text-emerald-700 text-[10px] font-bold shrink-0">POST</span>
-                        <input readOnly value="/v1/generate" className="flex-1 px-2 py-1 rounded border border-[#E8E8EF] bg-[#F7F7FA] text-xs text-[#374151] font-mono focus:outline-none min-w-0"/>
-                        <button onClick={sendPlayground} disabled={apiLoading}
-                          className="px-3 py-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 text-white text-xs font-semibold transition-colors shrink-0">
-                          {apiLoading?'...':'Send'}
-                        </button>
-                      </div>
-                      <div>
-                        <p className="text-[10px] font-semibold text-[#9CA3AF] uppercase tracking-wider mb-1.5">Body</p>
-                        <textarea value={apiBody} onChange={e=>setApiBody(e.target.value)} rows={5}
-                          className="w-full px-3 py-2 rounded-lg border border-[#E8E8EF] bg-[#F7F7FA] text-xs text-[#374151] font-mono focus:outline-none focus:border-indigo-300 resize-none"
-                        />
-                      </div>
-                      <div>
-                        <p className="text-[10px] font-semibold text-[#9CA3AF] uppercase tracking-wider mb-1.5">Response</p>
-                        {apiLoading ? (
-                          <div className="flex gap-1 p-3">{[0,150,300].map(d=><span key={d} className="w-1.5 h-1.5 bg-indigo-400 rounded-full animate-bounce" style={{animationDelay:`${d}ms`}}/>)}</div>
-                        ) : apiResponse ? (
-                          <div className="p-3 rounded-lg bg-[#F7F7FA] border border-[#E8E8EF] text-xs text-[#374151] leading-relaxed whitespace-pre-wrap">{apiResponse}</div>
-                        ) : (
-                          <div className="flex gap-2">
-                            {['radial-gradient(ellipse at 40% 40%,#1e3a5f,#0a0a0a)','radial-gradient(ellipse at 60% 40%,#2d1b69,#0a0a0a)','radial-gradient(ellipse at 50% 60%,#1a2e1a,#0a0a0a)'].map((g,i)=>(
-                              <div key={i} className="flex-1 h-14 rounded-lg" style={{background:g}}/>
-                            ))}
-                          </div>
-                        )}
-                      </div>
-                    </>
-                  ) : activePlayTab==='prompts' ? (
+                  {activePlayTab==='prompts' ? (
                     <div className="space-y-2">
                       <p className="text-[10px] text-[#9CA3AF] uppercase tracking-wider mb-2">Prompt library</p>
                       {PROMPT_LIBRARY.map((p,i)=>(
-                        <button key={i} onClick={()=>setApiBody(`{\n  "prompt": "${p.prompt}",\n  "style": "cinematic",\n  "ar": "16:9"\n}`)}
+                        <button key={i} onClick={()=>setLearnInput(p.prompt)}
                           className="w-full text-left p-2.5 rounded-lg border border-[#E8E8EF] hover:border-indigo-200 hover:bg-indigo-50/40 transition-colors group">
                           <p className="text-xs font-medium text-[#374151] group-hover:text-indigo-700">{p.label}</p>
                           <p className="text-[10px] text-[#9CA3AF] mt-0.5 leading-relaxed line-clamp-2">{p.prompt}</p>
@@ -1009,13 +1004,14 @@ export default function Workspace() {
                     </div>
                   ) : activePlayTab==='models' ? (
                     <div className="space-y-2">
-                      <p className="text-[10px] text-[#9CA3AF] uppercase tracking-wider mb-2">Select model</p>
+                      <p className="text-[10px] text-[#9CA3AF] uppercase tracking-wider mb-2">Select model — used for Chat & Learn</p>
                       {MODELS.map(m=>(
                         <button key={m.id} onClick={()=>setActiveModel(m.id)}
                           className={`w-full text-left p-2.5 rounded-lg border transition-colors flex items-center gap-3 ${activeModel===m.id?'border-indigo-300 bg-indigo-50':'border-[#E8E8EF] hover:border-indigo-200 hover:bg-[#F7F7FA]'}`}>
                           <Cpu size={14} className={activeModel===m.id?'text-indigo-600':'text-[#9CA3AF]'}/>
                           <div className="flex-1 min-w-0">
                             <p className="text-xs font-medium text-[#374151]">{m.label}</p>
+                            <p className="text-[10px] text-[#9CA3AF]">{m.provider}</p>
                           </div>
                           <span className={`px-1.5 py-0.5 rounded text-[9px] font-semibold ${activeModel===m.id?'bg-indigo-100 text-indigo-700':'bg-[#F7F7FA] text-[#9CA3AF]'}`}>{m.badge}</span>
                           {activeModel===m.id && <Check size={12} className="text-indigo-600 shrink-0"/>}
