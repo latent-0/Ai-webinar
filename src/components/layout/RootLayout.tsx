@@ -1,10 +1,11 @@
 import { Link, useRouter } from '@tanstack/react-router'
-import { Radio, BookOpen, Gamepad2, Zap } from 'lucide-react'
+import { Radio, BookOpen, Gamepad2, Zap, Film } from 'lucide-react'
 
 const navLinks = [
-  { to: '/live',  label: 'Live',  icon: Radio,    dot: true  },
-  { to: '/learn', label: 'Learn', icon: BookOpen,  dot: false },
-  { to: '/play',  label: 'Play',  icon: Gamepad2,  dot: false },
+  { to: '/live',   label: 'Live',   icon: Radio,    dot: true  },
+  { to: '/learn',  label: 'Learn',  icon: BookOpen,  dot: false },
+  { to: '/play',   label: 'Play',   icon: Gamepad2,  dot: false },
+  { to: '/canvas', label: 'Canvas', icon: Film,      dot: false },
 ]
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
