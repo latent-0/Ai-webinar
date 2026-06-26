@@ -34,26 +34,26 @@ const stats = [
 ]
 
 const pillars = [
-  { icon: Brain,    label: 'Reasoning', desc: 'Thinks before answering',  color: 'text-indigo-600',  bg: 'bg-indigo-50'  },
-  { icon: Database, label: 'Knowledge', desc: 'RAG across all domains',   color: 'text-emerald-600', bg: 'bg-emerald-50' },
-  { icon: Wrench,   label: 'Tools',     desc: 'Real software, real tasks', color: 'text-violet-600',  bg: 'bg-violet-50'  },
+  { icon: Brain,    label: 'Reasoning', desc: 'Thinks before answering',  color: 'text-indigo-600',  bg: 'bg-indigo-50 dark:bg-indigo-950/50'  },
+  { icon: Database, label: 'Knowledge', desc: 'RAG across all domains',   color: 'text-emerald-600', bg: 'bg-emerald-50 dark:bg-emerald-950/50' },
+  { icon: Wrench,   label: 'Tools',     desc: 'Real software, real tasks', color: 'text-violet-600',  bg: 'bg-violet-50 dark:bg-violet-950/50'  },
 ]
 
 export default function Landing() {
   return (
-    <div className="bg-white min-h-screen">
+    <div className="bg-[var(--surface)] min-h-screen">
 
       {/* ── Hero ─────────────────────────────────────────────── */}
       <section className="px-6 lg:px-12 pt-16 pb-10 max-w-[1200px] mx-auto">
         <div className="flex items-center gap-2 mb-8">
-          <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-indigo-50 border border-indigo-100">
+          <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-indigo-50 dark:bg-indigo-950/50 border border-indigo-100 dark:border-indigo-900/50">
             <span className="relative flex h-1.5 w-1.5">
               <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-60" />
               <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-emerald-500" />
             </span>
-            <span className="text-xs text-indigo-700 font-medium">Platform live</span>
+            <span className="text-xs text-indigo-700 dark:text-indigo-400 font-medium">Platform live</span>
           </div>
-          <span className="hidden sm:flex items-center gap-1.5 text-xs text-[#9CA3AF]">
+          <span className="hidden sm:flex items-center gap-1.5 text-xs text-[var(--faint)]">
             <Sparkles size={10} />
             AI-powered webinars · learning · tool sandbox
           </span>
@@ -62,15 +62,15 @@ export default function Landing() {
         <div className="grid lg:grid-cols-[1fr_360px] gap-12 items-center">
           <div>
             <ParticleHeadline />
-            <p className="text-lg text-[#6B7280] max-w-[420px] leading-relaxed mt-6 mb-8">
+            <p className="text-lg text-[var(--muted)] max-w-[420px] leading-relaxed mt-6 mb-8">
               Agentic AI that listens, learns, and responds — delivering a personalised intelligence layer to every participant.
             </p>
             <div className="flex flex-wrap gap-3">
-              <Link to="/live" className="group flex items-center gap-2 px-5 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-semibold text-sm transition-all hover:shadow-lg hover:shadow-indigo-200 hover:-translate-y-px">
+              <Link to="/live" className="group flex items-center gap-2 px-5 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-semibold text-sm transition-all hover:shadow-lg hover:shadow-indigo-200 dark:hover:shadow-indigo-900 hover:-translate-y-px">
                 Start a session
                 <ArrowRight size={15} className="group-hover:translate-x-0.5 transition-transform" />
               </Link>
-              <Link to="/learn" className="flex items-center gap-1.5 px-5 py-2.5 rounded-xl border border-[#E5E7EB] text-[#374151] hover:bg-gray-50 font-medium text-sm transition-colors">
+              <Link to="/learn" className="flex items-center gap-1.5 px-5 py-2.5 rounded-xl border border-[var(--border)] text-[var(--text-2)] hover:bg-[var(--surface-3)] font-medium text-sm transition-colors">
                 Explore knowledge hub
               </Link>
             </div>
@@ -84,28 +84,28 @@ export default function Landing() {
               { label: 'Playground',    sub: 'API running',       color: 'bg-violet-600',  icon: Zap       },
               { label: 'Participants',  sub: '128 online',        color: 'bg-amber-500',   icon: Users     },
             ].map(({ label, sub, color, icon: Icon }) => (
-              <div key={label} className="p-4 rounded-2xl bg-white border border-[#E8E8EF] shadow-sm hover:shadow-md transition-shadow">
+              <div key={label} className="p-4 rounded-2xl bg-[var(--surface)] border border-[var(--border)] shadow-sm hover:shadow-md transition-shadow">
                 <div className={`w-8 h-8 rounded-xl ${color} flex items-center justify-center mb-3`}>
                   <Icon size={14} className="text-white" />
                 </div>
-                <p className="text-sm font-semibold text-[#111827]">{label}</p>
-                <p className="text-xs text-[#9CA3AF] mt-0.5">{sub}</p>
+                <p className="text-sm font-semibold text-[var(--text)]">{label}</p>
+                <p className="text-xs text-[var(--faint)] mt-0.5">{sub}</p>
               </div>
             ))}
           </div>
         </div>
       </section>
 
-      <div className="border-t border-[#F0F0F5]" />
+      <div className="border-t border-[var(--border-2)]" />
 
       {/* ── Stats ────────────────────────────────────────────── */}
       <section className="px-6 lg:px-12 py-8 max-w-[1200px] mx-auto">
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
           {stats.map(({ value, label, sub }) => (
-            <div key={label} className="p-5 rounded-2xl bg-[#FAFAFA] border border-[#F0F0F5]">
-              <p className="text-3xl font-bold text-[#111827] tracking-tight">{value}</p>
-              <p className="text-sm font-semibold text-[#374151] mt-1">{label}</p>
-              <p className="text-xs text-[#9CA3AF] mt-0.5">{sub}</p>
+            <div key={label} className="p-5 rounded-2xl bg-[var(--surface-2)] border border-[var(--border-2)]">
+              <p className="text-3xl font-bold text-[var(--text)] tracking-tight">{value}</p>
+              <p className="text-sm font-semibold text-[var(--text-2)] mt-1">{label}</p>
+              <p className="text-xs text-[var(--faint)] mt-0.5">{sub}</p>
             </div>
           ))}
         </div>
@@ -113,7 +113,7 @@ export default function Landing() {
 
       {/* ── Mode cards ───────────────────────────────────────── */}
       <section className="px-6 lg:px-12 pb-12 max-w-[1200px] mx-auto">
-        <p className="text-xs font-semibold text-[#9CA3AF] uppercase tracking-wider mb-5">Three modes, one platform</p>
+        <p className="text-xs font-semibold text-[var(--faint)] uppercase tracking-wider mb-5">Three modes, one platform</p>
         <div className="grid lg:grid-cols-3 gap-4">
           {modes.map((mode) => {
             const Icon = mode.icon
@@ -127,22 +127,22 @@ export default function Landing() {
               <Link
                 key={mode.id}
                 to={mode.href}
-                className="group flex flex-col p-6 rounded-2xl bg-white border border-[#E8E8EF] hover:border-indigo-100 hover:shadow-xl hover:shadow-indigo-50/60 transition-all duration-300"
+                className="group flex flex-col p-6 rounded-2xl bg-[var(--surface)] border border-[var(--border)] hover:border-indigo-200 dark:hover:border-indigo-800 hover:shadow-xl hover:shadow-indigo-50/60 dark:hover:shadow-indigo-950/60 transition-all duration-300"
               >
                 <div className="flex items-start justify-between mb-5">
-                  <span className="text-[10px] font-mono text-[#CACAD4] tracking-widest">{mode.tag}</span>
+                  <span className="text-[10px] font-mono text-[var(--faint)] tracking-widest">{mode.tag}</span>
                   <div className={`w-9 h-9 rounded-xl bg-gradient-to-br ${grad} flex items-center justify-center shadow-sm`}>
                     <Icon size={17} className="text-white" />
                   </div>
                 </div>
-                <h3 className="text-2xl font-bold text-[#111827] tracking-tight">{mode.title}</h3>
+                <h3 className="text-2xl font-bold text-[var(--text)] tracking-tight">{mode.title}</h3>
                 <p className={`text-xs font-medium mt-0.5 mb-3 ${mode.accent === 'indigo' ? 'text-indigo-500' : mode.accent === 'emerald' ? 'text-emerald-500' : 'text-violet-500'}`}>
                   {mode.subtitle}
                 </p>
-                <p className="text-sm text-[#6B7280] leading-relaxed mb-5 flex-1">{mode.description}</p>
+                <p className="text-sm text-[var(--muted)] leading-relaxed mb-5 flex-1">{mode.description}</p>
                 <ul className="space-y-1.5 mb-5">
                   {mode.features.map((f) => (
-                    <li key={f} className="flex items-center gap-2 text-xs text-[#9CA3AF]">
+                    <li key={f} className="flex items-center gap-2 text-xs text-[var(--faint)]">
                       <span className={`w-1 h-1 rounded-full flex-shrink-0 ${mode.dot}`} />
                       {f}
                     </li>
@@ -160,25 +160,25 @@ export default function Landing() {
 
       {/* ── AI layer ─────────────────────────────────────────── */}
       <section className="px-6 lg:px-12 pb-20 max-w-[1200px] mx-auto">
-        <div className="p-8 rounded-3xl bg-gradient-to-br from-indigo-50 via-white to-violet-50 border border-indigo-100">
+        <div className="p-8 rounded-3xl bg-gradient-to-br from-indigo-50 via-white to-violet-50 dark:from-indigo-950/30 dark:via-[var(--surface)] dark:to-violet-950/30 border border-indigo-100 dark:border-indigo-900/40">
           <div className="flex items-center gap-3 mb-6">
             <div className="w-8 h-8 rounded-xl bg-indigo-600 flex items-center justify-center">
               <Zap size={14} className="text-white" />
             </div>
             <div>
-              <h3 className="text-base font-bold text-[#111827]">Unified AI layer</h3>
-              <p className="text-xs text-[#9CA3AF]">One intelligence core powering all three modes simultaneously</p>
+              <h3 className="text-base font-bold text-[var(--text)]">Unified AI layer</h3>
+              <p className="text-xs text-[var(--faint)]">One intelligence core powering all three modes simultaneously</p>
             </div>
           </div>
           <div className="grid sm:grid-cols-3 gap-4">
             {pillars.map(({ icon: PIcon, label, desc, color, bg }) => (
-              <div key={label} className="flex items-center gap-3 p-4 rounded-2xl bg-white border border-[#E8E8EF] shadow-sm">
+              <div key={label} className="flex items-center gap-3 p-4 rounded-2xl bg-[var(--surface)] border border-[var(--border)] shadow-sm">
                 <div className={`w-9 h-9 rounded-xl ${bg} flex items-center justify-center flex-shrink-0`}>
                   <PIcon size={16} className={color} />
                 </div>
                 <div>
-                  <p className="text-sm font-semibold text-[#111827]">{label}</p>
-                  <p className="text-xs text-[#9CA3AF]">{desc}</p>
+                  <p className="text-sm font-semibold text-[var(--text)]">{label}</p>
+                  <p className="text-xs text-[var(--faint)]">{desc}</p>
                 </div>
               </div>
             ))}

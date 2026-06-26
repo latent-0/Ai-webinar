@@ -1,5 +1,6 @@
+import { useState, useEffect } from 'react'
 import { Link, useRouter } from '@tanstack/react-router'
-import { Radio, BookOpen, Gamepad2, Zap, Film } from 'lucide-react'
+import { Radio, BookOpen, Gamepad2, Zap, Film, Sun, Moon } from 'lucide-react'
 
 const navLinks = [
   { to: '/live',   label: 'Live',   icon: Radio,    dot: true  },
@@ -11,16 +12,29 @@ const navLinks = [
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   const router = useRouter()
   const path = router.state.location.pathname
+  const [isDark, setIsDark] = useState(() =>
+    typeof document !== 'undefined' && document.documentElement.classList.contains('dark')
+  )
+
+  useEffect(() => {
+    if (isDark) {
+      document.documentElement.classList.add('dark')
+      localStorage.setItem('theme', 'dark')
+    } else {
+      document.documentElement.classList.remove('dark')
+      localStorage.setItem('theme', 'light')
+    }
+  }, [isDark])
 
   return (
-    <div className="min-h-screen bg-[#F7F7FA] text-[#111827]">
+    <div className="min-h-screen bg-[var(--bg)] text-[var(--text)]">
       {/* Top Nav */}
-      <header className="h-14 sticky top-0 z-50 bg-white/90 backdrop-blur-sm border-b border-[#E8E8EF] flex items-center px-6 gap-4">
+      <header className="h-14 sticky top-0 z-50 bg-white/90 dark:bg-[#1A1A1F]/90 backdrop-blur-sm border-b border-[var(--border)] flex items-center px-6 gap-4">
         <Link to="/" className="flex items-center gap-2.5 mr-4 flex-shrink-0">
           <div className="w-7 h-7 rounded-lg bg-indigo-600 flex items-center justify-center">
             <Zap size={13} className="text-white" />
           </div>
-          <span className="text-sm font-bold text-[#111827] tracking-tight">Sandbox</span>
+          <span className="text-sm font-bold text-[var(--text)] tracking-tight">Sandbox</span>
         </Link>
 
         <nav className="flex items-center gap-1">
@@ -32,8 +46,8 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
                 to={to}
                 className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
                   isActive
-                    ? 'bg-indigo-50 text-indigo-700'
-                    : 'text-[#6B7280] hover:bg-gray-100 hover:text-[#111827]'
+                    ? 'bg-indigo-50 dark:bg-indigo-950/50 text-indigo-700 dark:text-indigo-400'
+                    : 'text-[var(--muted)] hover:bg-[var(--surface-3)] hover:text-[var(--text)]'
                 }`}
               >
                 {dot && (
@@ -49,6 +63,14 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         </nav>
 
         <div className="flex-1" />
+
+        <button
+          onClick={() => setIsDark((d) => !d)}
+          className="p-2 rounded-lg hover:bg-[var(--surface-3)] text-[var(--muted)] hover:text-[var(--text)] transition-colors"
+          title={isDark ? 'Switch to light mode' : 'Switch to dark mode'}
+        >
+          {isDark ? <Sun size={15} /> : <Moon size={15} />}
+        </button>
 
         <Link
           to="/live"

@@ -99,45 +99,45 @@ export default function LiveRoom() {
     <div className="flex h-screen overflow-hidden">
       {/* Meeting area */}
       <div className="flex-1 flex flex-col min-w-0">
-        <div className="flex items-center justify-between px-4 py-3 bg-white border-b border-[#E8E8EF] shrink-0">
+        <div className="flex items-center justify-between px-4 py-3 bg-[var(--surface)] border-b border-[var(--border)] shrink-0">
           <div className="flex items-center gap-3">
             <span className="w-2 h-2 rounded-full bg-indigo-500 animate-pulse" />
-            <span className="text-sm font-medium text-[#111827] truncate max-w-xs">{roomId}</span>
+            <span className="text-sm font-medium text-[var(--text)] truncate max-w-xs">{roomId}</span>
           </div>
           <div className="flex items-center gap-2">
-            <span className="flex items-center gap-1.5 text-xs text-[#6B7280] px-3 py-1.5 rounded-full bg-[#F7F7FA] border border-[#E8E8EF]">
+            <span className="flex items-center gap-1.5 text-xs text-[var(--muted)] px-3 py-1.5 rounded-full bg-[var(--bg)] border border-[var(--border)]">
               <Users size={12} /> {participantCount}
             </span>
             <a
               href={`https://meet.jit.si/sandbox-live-${roomId}`}
               target="_blank"
               rel="noopener noreferrer"
-              className="p-1.5 rounded-lg hover:bg-[#F7F7FA] text-[#6B7280] hover:text-[#111827] transition-colors"
+              className="p-1.5 rounded-lg hover:bg-[var(--bg)] text-[var(--muted)] hover:text-[var(--text)] transition-colors"
               title="Open in full screen"
             >
               <ExternalLink size={15} />
             </a>
             <button
               onClick={() => setSidebarOpen(!sidebarOpen)}
-              className="p-1.5 rounded-lg hover:bg-[#F7F7FA] transition-colors"
+              className="p-1.5 rounded-lg hover:bg-[var(--bg)] transition-colors"
             >
-              <Brain size={16} className={sidebarOpen ? 'text-indigo-600' : 'text-[#6B7280]'} />
+              <Brain size={16} className={sidebarOpen ? 'text-indigo-600' : 'text-[var(--muted)]'} />
             </button>
             <button
               onClick={() => navigate({ to: '/live' })}
-              className="p-1.5 rounded-lg hover:bg-red-50 text-[#6B7280] hover:text-red-500 transition-colors"
+              className="p-1.5 rounded-lg hover:bg-red-50 dark:hover:bg-red-950/30 text-[var(--muted)] hover:text-red-500 transition-colors"
             >
               <X size={16} />
             </button>
           </div>
         </div>
 
-        <div ref={jitsiContainerRef} className="flex-1 bg-[#F7F7FA]">
+        <div ref={jitsiContainerRef} className="flex-1 bg-[var(--bg)]">
           {!jitsiLoaded && (
             <div className="flex items-center justify-center h-full">
               <div className="text-center">
                 <div className="w-8 h-8 border-2 border-indigo-500 border-t-transparent rounded-full animate-spin mx-auto mb-3" />
-                <p className="text-sm text-[#6B7280]">Connecting to meeting...</p>
+                <p className="text-sm text-[var(--muted)]">Connecting to meeting...</p>
               </div>
             </div>
           )}
@@ -146,11 +146,11 @@ export default function LiveRoom() {
 
       {/* AI Sidebar */}
       {sidebarOpen && (
-        <div className="w-80 bg-white border-l border-[#E8E8EF] flex flex-col shrink-0">
-          <div className="flex items-center gap-2 px-4 py-3 border-b border-[#E8E8EF]">
+        <div className="w-80 bg-[var(--surface)] border-l border-[var(--border)] flex flex-col shrink-0">
+          <div className="flex items-center gap-2 px-4 py-3 border-b border-[var(--border)]">
             <Brain size={16} className="text-indigo-600" />
-            <span className="text-sm font-semibold text-[#111827]">AI Assistant</span>
-            <button onClick={() => setSidebarOpen(false)} className="ml-auto text-[#9CA3AF] hover:text-[#111827] transition-colors">
+            <span className="text-sm font-semibold text-[var(--text)]">AI Assistant</span>
+            <button onClick={() => setSidebarOpen(false)} className="ml-auto text-[var(--faint)] hover:text-[var(--text)] transition-colors">
               <ChevronRight size={16} />
             </button>
           </div>
@@ -158,8 +158,8 @@ export default function LiveRoom() {
           <div className="flex-1 overflow-y-auto p-4 space-y-3">
             {liveAiMessages.length === 0 && (
               <div className="text-center py-8">
-                <Brain size={32} className="text-[#E8E8EF] mx-auto mb-3" />
-                <p className="text-xs text-[#9CA3AF] leading-relaxed">
+                <Brain size={32} className="text-[var(--border)] mx-auto mb-3" />
+                <p className="text-xs text-[var(--faint)] leading-relaxed">
                   Ask the AI anything during your session — questions are answered in real time.
                 </p>
               </div>
@@ -169,7 +169,7 @@ export default function LiveRoom() {
                 <div className={`max-w-[85%] px-3 py-2 rounded-lg text-xs leading-relaxed ${
                   msg.role === 'user'
                     ? 'bg-indigo-600 text-white'
-                    : 'bg-[#F7F7FA] border border-[#E8E8EF] text-[#374151]'
+                    : 'bg-[var(--bg)] border border-[var(--border)] text-[var(--text-2)]'
                 }`}>
                   {msg.content}
                 </div>
@@ -177,7 +177,7 @@ export default function LiveRoom() {
             ))}
             {aiLoading && (
               <div className="flex justify-start">
-                <div className="px-3 py-2 rounded-lg bg-[#F7F7FA] border border-[#E8E8EF]">
+                <div className="px-3 py-2 rounded-lg bg-[var(--bg)] border border-[var(--border)]">
                   <div className="flex gap-1">
                     {[0, 150, 300].map((d) => (
                       <span
@@ -193,18 +193,18 @@ export default function LiveRoom() {
             <div ref={messagesEndRef} />
           </div>
 
-          <form onSubmit={sendQuestion} className="p-3 border-t border-[#E8E8EF]">
+          <form onSubmit={sendQuestion} className="p-3 border-t border-[var(--border)]">
             <div className="flex gap-2">
               <input
                 value={question}
                 onChange={(e) => setQuestion(e.target.value)}
                 placeholder="Ask the AI..."
-                className="flex-1 px-3 py-2 rounded-lg bg-[#F7F7FA] border border-[#E8E8EF] text-xs text-[#111827] placeholder-[#9CA3AF] focus:outline-none focus:border-indigo-400"
+                className="flex-1 px-3 py-2 rounded-lg bg-[var(--bg)] border border-[var(--border)] text-xs text-[var(--text)] placeholder-[var(--faint)] focus:outline-none focus:border-indigo-400"
               />
               <button
                 type="submit"
                 disabled={!question.trim() || aiLoading}
-                className="p-2 rounded-lg bg-indigo-50 hover:bg-indigo-100 disabled:opacity-40 text-indigo-600 transition-colors"
+                className="p-2 rounded-lg bg-indigo-50 dark:bg-indigo-950/50 hover:bg-indigo-100 dark:hover:bg-indigo-950/70 disabled:opacity-40 text-indigo-600 transition-colors"
               >
                 <Send size={14} />
               </button>
