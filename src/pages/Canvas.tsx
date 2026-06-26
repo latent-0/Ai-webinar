@@ -1,6 +1,6 @@
 import { useState, useRef, useCallback, useEffect } from 'react'
 import { useNavigate } from '@tanstack/react-router'
-import { X, Plus, ZoomIn, ZoomOut, Maximize2, Image, Video, Loader2, AlertCircle, Wand2, Film } from 'lucide-react'
+import { X, Plus, ZoomIn, ZoomOut, Maximize2, Image, Video, Loader2, Wand2, Film } from 'lucide-react'
 import { textToImage, imageToVideo, hasRunwayKey } from '../lib/runway'
 
 type NodeType = 'prompt' | 'image' | 'video'
@@ -301,13 +301,6 @@ export default function Canvas() {
         <span className="text-[11px] text-white/30 tabular-nums">{Math.round(zoom * 100)}%</span>
       </div>
 
-      {/* No API key warning */}
-      {noKey && (
-        <div className="absolute top-16 left-1/2 -translate-x-1/2 z-10 flex items-center gap-2 px-4 py-2.5 rounded-xl bg-amber-500/10 border border-amber-500/30 text-amber-400 text-xs">
-          <AlertCircle size={13} />
-          Add <code className="font-mono bg-white/10 px-1 rounded">VITE_RUNWAY_API_KEY</code> to your .env.local to enable generation
-        </div>
-      )}
     </div>
   )
 }
