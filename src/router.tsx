@@ -5,6 +5,7 @@ import Live from './pages/Live'
 import Workspace from './pages/Workspace'
 import Learn from './pages/Learn'
 import Play from './pages/Play'
+import Canvas from './pages/Canvas'
 
 const rootRoute = createRootRoute({ component: () => <Outlet /> })
 
@@ -26,9 +27,16 @@ const workspaceRoute = createRoute({
   component: Workspace,
 })
 
+const canvasRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/canvas',
+  component: Canvas,
+})
+
 const routeTree = rootRoute.addChildren([
   layoutRoute.addChildren([indexRoute, liveRoute, learnRoute, playRoute]),
   workspaceRoute,
+  canvasRoute,
 ])
 
 export const router = createRouter({ routeTree })
